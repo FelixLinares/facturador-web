@@ -1,3 +1,5 @@
+# Backend/app.py
+
 from pathlib import Path
 from datetime import datetime
 from flask import Flask, jsonify, request, send_file, send_from_directory
@@ -8,11 +10,12 @@ from docx.enum.text import WD_ALIGN_PARAGRAPH, WD_PARAGRAPH_ALIGNMENT
 from docx.enum.table import WD_TABLE_ALIGNMENT
 from reportlab.lib.pagesizes import letter
 from reportlab.pdfgen import canvas
+import os
 
 # ─────────────────────────────────────────────────────────────────────────────
-BASE_DIR = Path(__file__).parent
+BASE_DIR  = Path(__file__).parent
 FRONT_DIR = BASE_DIR.parent / "frontend"
-TEMP_DIR = BASE_DIR / "temp"
+TEMP_DIR  = BASE_DIR / "temp"
 TEMP_DIR.mkdir(exist_ok=True)
 
 app = Flask(
@@ -25,9 +28,9 @@ CORS(app)
 
 # ─────────── “BD” en memoria y constantes de factura ──────────────────────────
 patients = []
-DOCTOR  = "DR. FRANCISCO ENRIQUE CABRERA PORTIELES"
-SPEC    = "NEUROFISIOLOGO CLINICO"
-LICENSE = "RM0307 - CC 1047488543"
+DOCTOR   = "DR. FRANCISCO ENRIQUE CABRERA PORTIELES"
+SPEC     = "NEUROFISIOLOGO CLINICO"
+LICENSE  = "RM0307 - CC 1047488543"
 
 def auto_price(idx: int) -> int:
     return 100_000 if idx < 20 else 70_000
@@ -42,10 +45,10 @@ def format_money(value: int) -> str:
 def docx_invoice(number: str) -> Path:
     doc = Document()
     for section in doc.sections:
-        section.top_margin = Cm(2)
+        section.top_margin    = Cm(2)
         section.bottom_margin = Cm(2)
-        section.left_margin = Cm(2.5)
-        section.right_margin = Cm(2.5)
+        section.left_margin   = Cm(2.5)
+        section.right_margin  = Cm(2.5)
 
     style = doc.styles['Normal']
     style.font.name = 'Arial'
@@ -54,14 +57,14 @@ def docx_invoice(number: str) -> Path:
     # encabezado
     hdr = doc.add_paragraph()
     hdr.alignment = WD_ALIGN_PARAGRAPH.CENTER
-    run = hdr.add_run(DOCTOR + "\n")
+    run  = hdr.add_run(DOCTOR + "\n")
     run.bold = True
     run.font.size = Pt(16)
     run.font.color.rgb = RGBColor(0, 51, 102)
-    sub = hdr.add_run(SPEC + "\n")
+    sub  = hdr.add_run(SPEC + "\n")
     sub.font.size = Pt(12)
     sub.font.color.rgb = RGBColor(0, 51, 102)
-    lic = hdr.add_run(LICENSE + "\n\n")
+    lic  = hdr.add_run(LICENSE + "\n\n")
     lic.italic = True
     lic.font.size = Pt(10)
     lic.font.color.rgb = RGBColor(0, 51, 102)
@@ -85,7 +88,7 @@ def docx_invoice(number: str) -> Path:
 
     # tabla
     table = doc.add_table(rows=1, cols=3)
-    table.style = 'Light List Accent 1'
+    table.style     = 'Light List Accent 1'
     table.alignment = WD_TABLE_ALIGNMENT.CENTER
     hdr_cells = table.rows[0].cells
     hdr_cells[0].text = "No."
@@ -144,9 +147,9 @@ def generate_pdf(number: str) -> Path:
         c.drawString(72, h-170, f"Fecha: {datetime.now():%d/%m/%Y %H:%M}")
 
     # layout
-    row_h = 18
+    row_h   = 18
     max_rows = int((h - 260) / row_h)
-    y = h - 225
+    y       = h - 225
 
     # primera página
     draw_full_header()
@@ -218,18 +221,13 @@ def one_patient(pid: int):
 
     if request.method == "DELETE":
         patients.remove(p)
-        # Reasigna IDs
         for i, obj in enumerate(patients, start=1):
             obj["id"] = i
         return "", 204
 
-    # --- PUT: editar paciente ---
     data = request.get_json(force=True) or {}
-
-    # Actualiza nombre si viene
     p["name"] = data.get("name", p["name"]).strip()
 
-    # Precio: uso explícito si viene, si no recalculado por auto_price
     if "price" in data:
         try:
             p["price"] = int(data["price"])
@@ -250,7 +248,7 @@ def invoice(fmt: str):
     if not patients:
         return jsonify(error="No hay pacientes para facturar"), 400
     data = request.get_json(force=True) or {}
-    num = data.get("invoice_number", f"FAC-{datetime.now():%Y%m%d%H%M%S}")
+    num  = data.get("invoice_number", f"FAC-{datetime.now():%Y%m%d%H%M%S}")
     path = docx_invoice(num) if fmt == "word" else generate_pdf(num)
     return send_file(path, as_attachment=True)
 
@@ -258,5 +256,10 @@ def invoice(fmt: str):
 def home():
     return send_from_directory(app.static_folder, "index.html")
 
+# ─────────────────────────────
+# INICIO APLICACIÓN (HOST/PORT desde env)
+# ─────────────────────────────
 if __name__ == "__main__":
-    app.run(debug=True)
+    host = os.environ.get("HOST", "0.0.0.0")
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host=host, port=port, debug=True)
