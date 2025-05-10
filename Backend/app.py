@@ -147,9 +147,9 @@ def generate_pdf(number: str) -> Path:
         c.drawString(72, h-170, f"Fecha: {datetime.now():%d/%m/%Y %H:%M}")
 
     # layout
-    row_h   = 18
+    row_h    = 18
     max_rows = int((h - 260) / row_h)
-    y       = h - 225
+    y        = h - 225
 
     # primera página
     draw_full_header()
@@ -202,7 +202,7 @@ def patients_api():
         name = data.get("name", "").strip()
         if not name:
             return jsonify(error="Nombre requerido"), 400
-        idx = len(patients)
+        idx   = len(patients)
         price = int(data.get("price") or auto_price(idx))
         if idx < 20:
             price = 100_000
