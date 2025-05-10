@@ -2,4 +2,4 @@
  Flask-Cors==3.0.10
  python-docx==0.8.11
  reportlab==3.6.13
-+Werkzeug<2.1
+Werkzeug<2.1
