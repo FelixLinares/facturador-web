@@ -1,5 +1,3 @@
-# backend/app.py
-
 from pathlib import Path
 from datetime import datetime
 from flask import Flask, jsonify, request, send_file, send_from_directory
@@ -217,16 +215,29 @@ def one_patient(pid: int):
     p = next((x for x in patients if x["id"] == pid), None)
     if not p:
         return "", 404
+
     if request.method == "DELETE":
         patients.remove(p)
-        for i, obj in enumerate(patients, 1):
+        # Reasigna IDs
+        for i, obj in enumerate(patients, start=1):
             obj["id"] = i
         return "", 204
+
+    # --- PUT: editar paciente ---
     data = request.get_json(force=True) or {}
+
+    # Actualiza nombre si viene
     p["name"] = data.get("name", p["name"]).strip()
-    p["price"] = int(data.get("price", p["price"]))
-    if p["id"] <= 20:
-        p["price"] = 100_000
+
+    # Precio: uso explícito si viene, si no recalculado por auto_price
+    if "price" in data:
+        try:
+            p["price"] = int(data["price"])
+        except ValueError:
+            return jsonify(error="Precio inválido"), 400
+    else:
+        p["price"] = auto_price(p["id"] - 1)
+
     return jsonify(p)
 
 @app.route("/api/clear", methods=["DELETE"])
