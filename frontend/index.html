@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Facturación de Pacientes</title>
+
+  <link rel="stylesheet"
+        href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+
+  <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+  <div class="container">
+    <header class="header">
+      <h1>Facturación de Pacientes</h1>
+      <p class="subtitle">¡Bienvenido Dr. Cabrera!</p>
+    </header>
+
+    <!-- BOTONES DE ACCIÓN -->
+    <div class="actions">
+      <button id="addBtn" class="btn btn-primary">
+        <i class="fa fa-user-plus"></i> Agregar Paciente
+      </button>
+
+      <button id="uploadBtn" class="btn btn-success">
+        <i class="fa fa-folder-open"></i> Cargar Archivos
+      </button>
+
+      <button id="clearBtn" class="btn btn-danger">
+        <i class="fa fa-trash"></i> Vaciar Lista
+      </button>
+
+      <!-- NUEVO BOTÓN EDITAR PRECIOS -->
+      <button
+        id="editPricesBtn"
+        class="btn btn-warning"
+        style="display:none"
+      >
+        <i class="fa fa-pen"></i> Editar precios
+      </button>
+
+      <input
+        id="fileInput"
+        type="file"
+        multiple
+        accept=".doc,.docx,.pdf"
+        hidden
+      >
+    </div>
+
+    <!-- RESUMEN -->
+    <div class="summary">
+      <div class="card">
+        <h4>Total</h4>
+        <p id="totalTxt">0</p>
+      </div>
+
+      <div class="card">
+        <h4>Subtotal</h4>
+        <p id="subtotalTxt">₱0</p>
+      </div>
+    </div>
+
+    <!-- PROGRESO -->
+    <div id="progressWrap" class="progress-wrap" hidden>
+      <div id="progressBar" class="progress-bar"></div>
+    </div>
+
+    <!-- FACTURA -->
+    <div class="card">
+      <label>Número de Factura:</label>
+      <input id="invoiceInput" class="form-control">
+
+      <div class="btn-row">
+        <button id="pdfBtn" class="btn btn-warning">
+          <i class="fa fa-file-pdf"></i> PDF
+        </button>
+
+        <button id="docxBtn" class="btn btn-info">
+          <i class="fa fa-file-word"></i> Word
+        </button>
+      </div>
+    </div>
+
+    <!-- TABLA -->
+    <table class="table">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Nombre</th>
+          <th>Valor</th>
+          <th>Acciones</th>
+        </tr>
+      </thead>
+
+      <tbody id="tbody">
+        <tr class="empty">
+          <td colspan="4">No hay pacientes</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- MODAL NUEVO / EDITAR PACIENTE (EXISTENTE) -->
+  <dialog id="modal">
+    <h3 id="modalTitle">Nuevo Paciente</h3>
+
+    <form id="modalForm" method="dialog">
+      <input
+        id="nameInput"
+        class="form-control"
+        placeholder="Nombre completo"
+        required
+      >
+
+      <input
+        id="priceInput"
+        class="form-control"
+        placeholder="Precio (opcional)"
+        type="number"
+        min="0"
+      >
+
+      <div class="btn-row">
+        <button value="ok" class="btn btn-primary">
+          Guardar
+        </button>
+        <button value="cancel" class="btn btn-danger">
+          Cancelar
+        </button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- MODAL EDICIÓN MASIVA DE PRECIOS (NUEVO) -->
+  <div id="editPricesModal" class="modal-precios">
+    <div class="modal-contenido">
+      <h3>Edición masiva de precios</h3>
+
+      <div id="pricesList">
+        <!-- aquí se cargan los grupos de precios -->
+      </div>
+
+      <div class="btn-row" style="justify-content:flex-end;">
+        <button id="cancelEditPrices" class="btn btn-danger">
+          Cancelar
+        </button>
+        <button id="applyEditPrices" class="btn btn-success">
+          Aplicar cambios
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
