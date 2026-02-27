@@ -3,82 +3,517 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Facturación de Pacientes</title>
-  <link rel="stylesheet"
-        href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
-  <link rel="stylesheet" href="styles.css">
+  <title>Facturador Médico · Facturador FL</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <style>
+    :root{--bg:#060b18;--card:#0d1526;--card2:#111d35;--border:#1a2a45;
+      --accent:#4f8bff;--text:#dce6f8;--muted:#5a7099;
+      --danger:#ff4d6a;--success:#22d3a0;--warn:#f59e0b;}
+    *{box-sizing:border-box;margin:0;padding:0;}
+    body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;}
+    .dots{position:fixed;inset:0;pointer-events:none;z-index:0;
+      background-image:radial-gradient(rgba(79,139,255,.05) 1px,transparent 1px);
+      background-size:28px 28px;}
+    .bg-glow{position:fixed;inset:0;pointer-events:none;z-index:0;}
+    .bg-glow::before{content:'';position:absolute;width:600px;height:600px;
+      background:radial-gradient(circle,rgba(79,139,255,.1) 0%,transparent 65%);
+      top:-150px;left:-100px;animation:drift 10s ease-in-out infinite alternate;}
+    @keyframes drift{from{transform:translate(0,0)}to{transform:translate(50px,30px)}}
+
+    nav{position:sticky;top:0;z-index:100;background:rgba(6,11,24,.92);
+      border-bottom:1px solid var(--border);
+      display:flex;align-items:center;justify-content:space-between;
+      padding:13px 28px;backdrop-filter:blur(12px);}
+    .nav-left{display:flex;align-items:center;gap:10px;}
+    .nav-icon{width:34px;height:34px;background:linear-gradient(135deg,#4f8bff,#7c5cff);
+      border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:15px;
+      box-shadow:0 3px 12px rgba(79,139,255,.35);}
+    .nav-title{font-family:'Syne',sans-serif;font-weight:700;font-size:15px;}
+    .nav-tag{font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.6px;
+      padding:2px 9px;border-radius:999px;
+      background:rgba(79,139,255,.12);color:#4f8bff;border:1px solid rgba(79,139,255,.22);}
+    .nav-right{display:flex;align-items:center;gap:8px;}
+    .nav-user{color:var(--muted);font-size:12px;}
+    .btn-nav{background:rgba(255,255,255,.05);border:1px solid var(--border);
+      color:var(--muted);padding:6px 13px;border-radius:7px;font-size:12px;cursor:pointer;
+      display:flex;align-items:center;gap:5px;font-family:'DM Sans',sans-serif;transition:.2s;}
+    .btn-nav:hover{background:rgba(255,255,255,.09);color:var(--text);}
+
+    .main{position:relative;z-index:1;max-width:1150px;margin:0 auto;padding:24px 20px;}
+
+    /* Header */
+    .page-header{background:linear-gradient(135deg,rgba(79,139,255,.18),rgba(124,92,255,.12));
+      border:1px solid rgba(79,139,255,.22);border-radius:18px;padding:28px 32px;
+      margin-bottom:20px;position:relative;overflow:hidden;animation:fadeUp .5s ease;}
+    .page-header::after{content:'🩺';position:absolute;right:28px;top:50%;
+      transform:translateY(-50%);font-size:64px;opacity:.08;}
+    .header-badge{display:inline-flex;align-items:center;gap:6px;
+      background:rgba(79,139,255,.14);border:1px solid rgba(79,139,255,.28);
+      color:#4f8bff;padding:4px 12px;border-radius:999px;
+      font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.6px;margin-bottom:10px;}
+    .page-header h1{font-family:'Syne',sans-serif;font-size:26px;font-weight:800;
+      background:linear-gradient(135deg,#dce6f8,#4f8bff);
+      -webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:4px;}
+    .page-header p{color:var(--muted);font-size:12px;letter-spacing:.3px;}
+    @keyframes fadeUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+
+    /* Stats */
+    .stats-row{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:18px;}
+    .stat-card{background:var(--card);border:1px solid var(--border);border-radius:14px;
+      padding:18px 20px;display:flex;align-items:center;gap:14px;
+      animation:fadeUp .5s ease both;}
+    .stat-card:nth-child(1){animation-delay:.05s}.stat-card:nth-child(2){animation-delay:.1s}
+    .stat-ic{width:44px;height:44px;border-radius:12px;
+      display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;}
+    .stat-val{font-family:'Syne',sans-serif;font-size:26px;font-weight:800;}
+    .stat-lbl{font-size:11px;color:var(--muted);margin-top:1px;}
+
+    /* Actions */
+    .actions-bar{display:flex;flex-wrap:wrap;gap:9px;margin-bottom:18px;
+      animation:fadeUp .5s .1s ease both;}
+    .btn{border:none;padding:9px 16px;border-radius:9px;font-weight:600;cursor:pointer;
+      color:#fff;display:inline-flex;align-items:center;gap:7px;transition:.2s;
+      font-family:'DM Sans',sans-serif;font-size:13px;}
+    .btn:hover{transform:translateY(-1px);filter:brightness(1.1);}
+    .btn-primary{background:linear-gradient(135deg,#4f8bff,#7c5cff);box-shadow:0 4px 14px rgba(79,139,255,.28);}
+    .btn-success{background:linear-gradient(135deg,#059669,#22d3a0);box-shadow:0 4px 12px rgba(34,211,160,.22);}
+    .btn-danger {background:linear-gradient(135deg,#dc2626,#ff4d6a);box-shadow:0 4px 12px rgba(255,77,106,.22);}
+    .btn-warn   {background:linear-gradient(135deg,#d97706,#f59e0b);box-shadow:0 4px 12px rgba(245,158,11,.22);}
+    .btn-ghost  {background:rgba(255,255,255,.05);border:1px solid var(--border);color:var(--muted);}
+    .btn-ghost:hover{color:var(--text);background:rgba(255,255,255,.09);}
+    .btn-sm{padding:6px 11px;font-size:11px;border-radius:7px;}
+
+    /* Search + Invoice bar */
+    .top-bar{display:flex;gap:12px;margin-bottom:18px;flex-wrap:wrap;
+      animation:fadeUp .5s .15s ease both;}
+    .search-wrap{flex:1;min-width:200px;position:relative;}
+    .search-wrap i{position:absolute;left:13px;top:50%;transform:translateY(-50%);
+      color:var(--muted);font-size:13px;}
+    .search-input{width:100%;background:var(--card);border:1px solid var(--border);
+      border-radius:9px;padding:10px 13px 10px 36px;font-size:13px;color:var(--text);
+      font-family:'DM Sans',sans-serif;outline:none;transition:.2s;}
+    .search-input:focus{border-color:var(--accent);box-shadow:0 0 0 2px rgba(79,139,255,.12);}
+    .search-input::placeholder{color:var(--muted);}
+    .invoice-row{display:flex;align-items:center;gap:8px;flex-shrink:0;}
+    .invoice-input{background:var(--card);border:1px solid var(--border);
+      border-radius:9px;padding:10px 13px;font-size:13px;color:var(--text);
+      font-family:'DM Sans',sans-serif;outline:none;transition:.2s;width:170px;}
+    .invoice-input:focus{border-color:var(--accent);}
+    .btn-pdf {background:linear-gradient(135deg,#d97706,#f59e0b);box-shadow:0 3px 10px rgba(245,158,11,.25);}
+    .btn-word{background:linear-gradient(135deg,#1d4ed8,#4f8bff);box-shadow:0 3px 10px rgba(79,139,255,.25);}
+
+    /* Upload progress */
+    .prog-wrap{background:rgba(255,255,255,.04);border-radius:999px;height:5px;
+      margin:0 0 14px;overflow:hidden;display:none;}
+    .prog-bar{height:5px;border-radius:999px;width:0;transition:width .2s;
+      background:linear-gradient(90deg,#4f8bff,#22d3a0);
+      box-shadow:0 0 8px rgba(79,139,255,.5);}
+
+    /* Table */
+    .table-wrap{background:var(--card);border:1px solid var(--border);border-radius:16px;
+      overflow:hidden;animation:fadeUp .5s .2s ease both;}
+    .table-wrap table{width:100%;border-collapse:collapse;}
+    .table-wrap thead th{
+      background:linear-gradient(135deg,rgba(79,139,255,.18),rgba(124,92,255,.1));
+      padding:12px 16px;font-size:10px;font-weight:800;
+      color:#4f8bff;text-transform:uppercase;letter-spacing:.6px;
+      text-align:left;border-bottom:1px solid var(--border);}
+    .table-wrap tbody tr{border-bottom:1px solid rgba(255,255,255,.04);transition:.15s;}
+    .table-wrap tbody tr:last-child{border-bottom:none;}
+    .table-wrap tbody tr:hover{background:rgba(79,139,255,.04);}
+    .table-wrap td{padding:11px 16px;font-size:13px;}
+    .td-id{color:var(--muted);font-weight:600;width:50px;}
+    .td-name{font-weight:500;}
+    .td-price{color:#22d3a0;font-weight:700;font-family:'Syne',sans-serif;}
+    .td-empty{text-align:center;color:var(--muted);padding:48px!important;font-size:14px;}
+
+    /* Tabs */
+    .tabs{display:flex;gap:4px;margin-bottom:16px;
+      background:rgba(255,255,255,.03);border:1px solid var(--border);
+      border-radius:10px;padding:4px;width:fit-content;}
+    .tab{padding:7px 16px;border-radius:7px;font-size:12px;font-weight:600;cursor:pointer;
+      color:var(--muted);transition:.2s;border:none;background:none;font-family:'DM Sans',sans-serif;}
+    .tab.active{background:rgba(79,139,255,.15);color:#4f8bff;}
+    .tab:hover:not(.active){color:var(--text);}
+
+    /* History table */
+    .hist-badge{font-size:10px;padding:2px 9px;border-radius:999px;font-weight:700;
+      background:rgba(34,211,160,.1);color:#22d3a0;border:1px solid rgba(34,211,160,.2);}
+
+    /* Modals */
+    .overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);
+      display:none;align-items:center;justify-content:center;
+      z-index:200;backdrop-filter:blur(5px);}
+    .overlay.show{display:flex;}
+    .modal-box{background:var(--card);border:1px solid var(--border);
+      border-radius:18px;padding:28px;width:100%;max-width:420px;
+      animation:modIn .25s ease;max-height:90vh;overflow-y:auto;}
+    @keyframes modIn{from{opacity:0;transform:scale(.95)}to{opacity:1;transform:scale(1)}}
+    .modal-box h3{font-family:'Syne',sans-serif;font-size:17px;font-weight:700;
+      margin-bottom:20px;display:flex;align-items:center;gap:8px;}
+    .mf{margin-bottom:13px;}
+    .mf label{display:block;font-size:10px;font-weight:700;color:var(--muted);
+      text-transform:uppercase;letter-spacing:.6px;margin-bottom:6px;}
+    .mf input{width:100%;background:rgba(255,255,255,.05);border:1px solid var(--border);
+      border-radius:8px;padding:10px 12px;font-size:13px;color:var(--text);
+      font-family:'DM Sans',sans-serif;outline:none;transition:.2s;}
+    .mf input:focus{border-color:var(--accent);box-shadow:0 0 0 2px rgba(79,139,255,.12);}
+    .mf input::placeholder{color:var(--muted);}
+    .modal-acts{display:flex;gap:9px;margin-top:18px;}
+    .btn-msave{flex:1;background:linear-gradient(135deg,#4f8bff,#7c5cff);border:none;
+      color:#fff;padding:11px;border-radius:8px;font-size:14px;font-weight:600;
+      cursor:pointer;font-family:'DM Sans',sans-serif;transition:.2s;}
+    .btn-msave:hover{opacity:.9;}
+    .btn-mcancel{background:rgba(255,255,255,.05);border:1px solid var(--border);
+      color:var(--muted);padding:11px 16px;border-radius:8px;
+      cursor:pointer;font-family:'DM Sans',sans-serif;font-size:14px;transition:.2s;}
+    .btn-mcancel:hover{color:var(--text);}
+
+    /* Mass edit modal */
+    .mass-info{background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.2);
+      border-radius:9px;padding:11px 14px;margin-bottom:14px;
+      font-size:13px;color:#f59e0b;display:flex;align-items:center;gap:8px;}
+    .mass-prog-wrap{background:rgba(255,255,255,.05);border-radius:999px;
+      height:10px;margin:12px 0;overflow:hidden;display:none;
+      border:1px solid rgba(255,255,255,.06);}
+    .mass-prog-bar{height:10px;border-radius:999px;width:0%;
+      background:linear-gradient(90deg,#4f8bff,#22d3a0);transition:width .15s;
+      box-shadow:0 0 10px rgba(79,139,255,.5);}
+    .mass-prog-lbl{text-align:center;font-size:12px;color:var(--muted);
+      margin-top:5px;display:none;font-weight:600;}
+
+    .toast{position:fixed;bottom:22px;right:22px;
+      background:#0d1526;border:1px solid #4f8bff;color:var(--text);
+      padding:11px 18px;border-radius:9px;font-size:13px;
+      display:flex;align-items:center;gap:8px;z-index:999;
+      animation:toastIn .3s ease;box-shadow:0 8px 24px rgba(0,0,0,.5);}
+    @keyframes toastIn{from{transform:translateX(80px);opacity:0}to{transform:none;opacity:1}}
+    .fade-row{animation:rowIn .3s ease;}
+    @keyframes rowIn{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:none}}
+  </style>
 </head>
 <body>
-  <div class="container">
-    <header class="header">
-      <h1>Facturación de Pacientes</h1>
-      <p class="subtitle">¡Bienvenido Dr. Cabrera!</p>
-    </header>
+  <div class="dots"></div><div class="bg-glow"></div>
 
-    <div class="actions">
-      <button id="addBtn"    class="btn btn-primary">
-        <i class="fa fa-user-plus"></i> Agregar Paciente
+  <nav>
+    <div class="nav-left">
+      <div class="nav-icon">🩺</div>
+      <span class="nav-title">Facturación Médica</span>
+      <span class="nav-tag">Clínica</span>
+    </div>
+    <div class="nav-right">
+      <span class="nav-user" id="navUser"></span>
+      <button class="btn-nav" onclick="location.href='/dashboard'">
+        <i class="fa fa-grid-2"></i> Dashboard
       </button>
-      <button id="uploadBtn" class="btn btn-success">
-        <i class="fa fa-folder-open"></i> Cargar Archivos
-      </button>
-      <button id="clearBtn"  class="btn btn-danger">
-        <i class="fa fa-trash"></i> Vaciar Lista
-      </button>
+    </div>
+  </nav>
+
+  <div class="main">
+    <div class="page-header">
+      <div class="header-badge"><i class="fa fa-stethoscope"></i> Neurofisiología Clínica</div>
+      <h1>Facturación de Pacientes</h1>
+      <p>DR. FRANCISCO ENRIQUE CABRERA PORTIELES &nbsp;·&nbsp; RM0307 - CC 1047488543</p>
+    </div>
+
+    <div class="stats-row">
+      <div class="stat-card">
+        <div class="stat-ic" style="background:rgba(79,139,255,.13)"><i class="fa fa-users" style="color:#4f8bff"></i></div>
+        <div><div class="stat-val" id="totalTxt" style="color:#4f8bff">0</div><div class="stat-lbl">Total pacientes</div></div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-ic" style="background:rgba(34,211,160,.12)"><i class="fa fa-coins" style="color:#22d3a0"></i></div>
+        <div><div class="stat-val" id="subtotalTxt" style="color:#22d3a0">$0</div><div class="stat-lbl">Subtotal a facturar</div></div>
+      </div>
+    </div>
+
+    <div class="actions-bar">
+      <button id="addBtn" class="btn btn-primary"><i class="fa fa-user-plus"></i> Agregar Paciente</button>
+      <button id="uploadBtn" class="btn btn-success"><i class="fa fa-folder-open"></i> Cargar Archivos</button>
+      <button id="clearBtn" class="btn btn-danger"><i class="fa fa-trash"></i> Vaciar Lista</button>
+      <button id="editPricesBtn" class="btn btn-warn"><i class="fa fa-tags"></i> Editar Precios Masivo</button>
       <input id="fileInput" type="file" multiple accept=".doc,.docx,.pdf" hidden>
     </div>
 
-    <div class="summary">
-      <div class="card">
-        <h4>Total</h4>
-        <p id="totalTxt">0</p>
-      </div>
-      <div class="card">
-        <h4>Subtotal</h4>
-        <p id="subtotalTxt">₱0</p>
-      </div>
-    </div>
+    <div id="progWrap" class="prog-wrap"><div id="progBar" class="prog-bar"></div></div>
 
-    <div id="progressWrap" class="progress-wrap" hidden>
-      <div id="progressBar" class="progress-bar"></div>
-    </div>
-
-    <div class="card">
-      <label>Número de Factura:</label>
-      <input id="invoiceInput" class="form-control">
-      <div class="btn-row">
-        <button id="pdfBtn"  class="btn btn-warning">
-          <i class="fa fa-file-pdf"></i> PDF
-        </button>
-        <button id="docxBtn" class="btn btn-info">
-          <i class="fa fa-file-word"></i> Word
-        </button>
+    <div class="top-bar">
+      <div class="search-wrap">
+        <i class="fa fa-magnifying-glass"></i>
+        <input id="searchInput" class="search-input" placeholder="Buscar paciente por nombre...">
+      </div>
+      <div class="invoice-row">
+        <input id="invoiceInput" class="invoice-input" placeholder="N° Factura">
+        <button id="pdfBtn"  class="btn btn-pdf"> <i class="fa fa-file-pdf"></i>  PDF</button>
+        <button id="docxBtn" class="btn btn-word"><i class="fa fa-file-word"></i> Word</button>
       </div>
     </div>
 
-    <table class="table">
-      <thead>
-        <tr><th>ID</th><th>Nombre</th><th>Valor</th><th>Acciones</th></tr>
-      </thead>
-      <tbody id="tbody">
-        <tr class="empty"><td colspan="4">No hay pacientes</td></tr>
-      </tbody>
-    </table>
+    <div class="tabs">
+      <button class="tab active" data-tab="patients">Pacientes</button>
+      <button class="tab" data-tab="history">Historial de Facturas</button>
+    </div>
+
+    <!-- Patients panel -->
+    <div id="panelPatients">
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>ID</th><th>Nombre del Paciente</th><th>Valor</th><th>Acciones</th></tr></thead>
+          <tbody id="tbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- History panel -->
+    <div id="panelHistory" style="display:none">
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Factura</th><th>Fecha</th><th>Pacientes</th><th>Total</th><th>Descargar</th></tr></thead>
+          <tbody id="histTbody"></tbody>
+        </table>
+      </div>
+    </div>
   </div>
 
-  <dialog id="modal">
-    <h3 id="modalTitle">Nuevo Paciente</h3>
-    <form id="modalForm" method="dialog">
-      <input id="nameInput"  class="form-control" placeholder="Nombre completo" required>
-      <input id="priceInput" class="form-control"
-             placeholder="Precio (opcional)" type="number" min="0">
-      <div class="btn-row">
-        <button value="ok"     class="btn btn-primary">Guardar</button>
-        <button value="cancel" class="btn btn-danger">Cancelar</button>
+  <!-- Modal paciente -->
+  <div class="overlay" id="ovPatient">
+    <div class="modal-box">
+      <h3 id="modTitle"><i class="fa fa-user-plus" style="color:#4f8bff"></i> Nuevo Paciente</h3>
+      <div class="mf"><label>Nombre completo</label>
+        <input id="mName" placeholder="Ej: Juan Pérez García"></div>
+      <div class="mf"><label>Precio (vacío = automático)</label>
+        <input id="mPrice" placeholder="100000" type="number" min="0"></div>
+      <div class="modal-acts">
+        <button class="btn-msave" id="btnSavePat"><i class="fa fa-floppy-disk"></i> Guardar</button>
+        <button class="btn-mcancel" id="btnCancelPat">Cancelar</button>
       </div>
-    </form>
-  </dialog>
+    </div>
+  </div>
 
-  <script src="app.js"></script>
+  <!-- Modal edición masiva -->
+  <div class="overlay" id="ovMass">
+    <div class="modal-box">
+      <h3><i class="fa fa-tags" style="color:#f59e0b"></i> Edición Masiva de Precios</h3>
+      <div class="mass-info">
+        <i class="fa fa-circle-info"></i>
+        <span><strong id="massCount">0</strong> pacientes · precio actual: <strong id="massCurrent">–</strong></span>
+      </div>
+      <div class="mf"><label>Nuevo precio para TODOS los pacientes</label>
+        <input id="massPrice" placeholder="Ej: 100000" type="number" min="0"></div>
+      <div class="mass-prog-wrap" id="massPW"><div class="mass-prog-bar" id="massPB"></div></div>
+      <div class="mass-prog-lbl" id="massPL"></div>
+      <div class="modal-acts" id="massActs">
+        <button class="btn-msave" id="btnApplyMass" style="background:linear-gradient(135deg,#d97706,#f59e0b)">
+          <i class="fa fa-check"></i> Aplicar cambios
+        </button>
+        <button class="btn-mcancel" id="btnCancelMass">Cancelar</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const token=localStorage.getItem("token");
+    const user=JSON.parse(localStorage.getItem("user")||"null");
+    if(!token||!user){location.href="/";}
+    const AUTH={Authorization:`Bearer ${token}`};
+    const API="/api/medical";
+    const $=id=>document.getElementById(id);
+    let editId=null, allPatients=[];
+
+    $("navUser").textContent=user.name||user.username;
+
+    function cop(v){return "$"+parseInt(v).toLocaleString("es-CO");}
+    function toast(msg,color="#4f8bff"){
+      const d=document.createElement("div");d.className="toast";d.style.borderColor=color;
+      d.innerHTML=`<i class="fa fa-circle-check" style="color:${color}"></i> ${msg}`;
+      document.body.appendChild(d);setTimeout(()=>d.remove(),2800);}
+
+    // ── Tabs ─────────────────────────────────────────────────
+    document.querySelectorAll(".tab").forEach(t=>{
+      t.onclick=()=>{
+        document.querySelectorAll(".tab").forEach(x=>x.classList.remove("active"));
+        t.classList.add("active");
+        $("panelPatients").style.display=t.dataset.tab==="patients"?"block":"none";
+        $("panelHistory").style.display=t.dataset.tab==="history"?"block":"none";
+        if(t.dataset.tab==="history") loadHistory();
+      };
+    });
+
+    // ── Load patients ─────────────────────────────────────────
+    async function load(){
+      const res=await fetch(`${API}/patients`,{headers:AUTH});
+      if(res.status===401){location.href="/";return;}
+      const {patients,count,subtotal}=await res.json();
+      allPatients=patients;
+      $("totalTxt").textContent=count;
+      $("subtotalTxt").textContent=cop(subtotal);
+      renderTable(patients);
+    }
+
+    function renderTable(pts){
+      const tb=$("tbody");tb.innerHTML="";
+      if(!pts.length){
+        tb.innerHTML=`<tr><td colspan="4" class="td-empty">
+          <i class="fa fa-inbox" style="font-size:28px;display:block;margin-bottom:10px;opacity:.3"></i>
+          No hay pacientes registrados</td></tr>`;return;}
+      pts.forEach(p=>{
+        const tr=document.createElement("tr");tr.className="fade-row";
+        tr.innerHTML=`<td class="td-id">${p.id}</td>
+          <td class="td-name">${p.name}</td>
+          <td class="td-price">${cop(p.price)}</td>
+          <td><button class="btn btn-primary btn-sm edit" data-id="${p.id}"><i class="fa fa-pen"></i></button>
+          <button class="btn btn-danger btn-sm del" data-id="${p.id}" style="margin-left:5px"><i class="fa fa-trash"></i></button></td>`;
+        tb.appendChild(tr);});
+    }
+
+    // Search filter
+    $("searchInput").oninput=e=>{
+      const q=e.target.value.toLowerCase();
+      renderTable(q?allPatients.filter(p=>p.name.toLowerCase().includes(q)):allPatients);
+    };
+
+    // ── CRUD ──────────────────────────────────────────────────
+    $("addBtn").onclick=()=>{
+      editId=null;$("mName").value="";$("mPrice").value="";
+      $("modTitle").innerHTML=`<i class="fa fa-user-plus" style="color:#4f8bff"></i> Nuevo Paciente`;
+      $("ovPatient").classList.add("show");};
+    $("btnCancelPat").onclick=()=>$("ovPatient").classList.remove("show");
+
+    $("btnSavePat").onclick=async()=>{
+      const name=$("mName").value.trim();
+      if(!name){toast("Nombre requerido","#ff4d6a");return;}
+      const body={name};
+      if($("mPrice").value) body.price=$("mPrice").value;
+      const url=editId?`${API}/patients/${editId}`:`${API}/patients`;
+      const method=editId?"PUT":"POST";
+      const r=await fetch(url,{method,headers:{...AUTH,"Content-Type":"application/json"},body:JSON.stringify(body)});
+      if(!r.ok){toast("Error al guardar","#ff4d6a");return;}
+      $("ovPatient").classList.remove("show");load();
+      toast(editId?"Paciente actualizado ✓":"Paciente agregado ✓");};
+
+    $("tbody").onclick=e=>{
+      const btn=e.target.closest("button");if(!btn)return;
+      const id=btn.dataset.id;
+      if(btn.classList.contains("del")){
+        if(!confirm("¿Eliminar este paciente?"))return;
+        fetch(`${API}/patients/${id}`,{method:"DELETE",headers:AUTH}).then(load)
+          .then(()=>toast("Eliminado","#ff4d6a"));
+      } else if(btn.classList.contains("edit")){
+        editId=id;
+        const tr=btn.closest("tr").children;
+        $("mName").value=tr[1].textContent;
+        $("mPrice").value=parseInt(tr[2].textContent.replace(/[^\d]/g,""))||"";
+        $("modTitle").innerHTML=`<i class="fa fa-pen" style="color:#4f8bff"></i> Editar Paciente`;
+        $("ovPatient").classList.add("show");}};
+
+    $("clearBtn").onclick=()=>{
+      if(!confirm("¿Vaciar toda la lista?"))return;
+      fetch(`${API}/clear`,{method:"DELETE",headers:AUTH}).then(load)
+        .then(()=>toast("Lista vaciada","#ff4d6a"));};
+
+    // Upload
+    $("uploadBtn").onclick=()=>$("fileInput").click();
+    $("fileInput").onchange=()=>{
+      const fd=new FormData();
+      [...$("fileInput").files].forEach(f=>fd.append("files",f));
+      const xhr=new XMLHttpRequest();
+      xhr.upload.onprogress=e=>{
+        $("progWrap").style.display="block";
+        $("progBar").style.width=Math.round(e.loaded*100/e.total)+"%";};
+      xhr.onload=()=>{$("progWrap").style.display="none";load();$("fileInput").value="";toast("Archivos cargados ✓");};
+      xhr.open("POST",`${API}/patients`);
+      xhr.setRequestHeader("Authorization",`Bearer ${token}`);
+      xhr.send(fd);};
+
+    // Mass edit
+    $("editPricesBtn").onclick=async()=>{
+      const r=await fetch(`${API}/patients`,{headers:AUTH});
+      const {patients}=await r.json();
+      if(!patients.length){toast("Sin pacientes","#ff4d6a");return;}
+      const prices=patients.map(p=>p.price);
+      const uniq=[...new Set(prices)];
+      $("massCount").textContent=patients.length;
+      $("massCurrent").textContent=uniq.length===1?cop(uniq[0]):"precios mixtos";
+      $("massPrice").value="";
+      $("massPW").style.display="none";$("massPB").style.width="0%";
+      $("massPL").style.display="none";$("massActs").style.display="flex";
+      $("ovMass").classList.add("show");};
+    $("btnCancelMass").onclick=()=>$("ovMass").classList.remove("show");
+
+    $("btnApplyMass").onclick=async()=>{
+      const val=parseInt($("massPrice").value);
+      if(!val||val<0){toast("Precio inválido","#ff4d6a");return;}
+      const r=await fetch(`${API}/patients`,{headers:AUTH});
+      const {patients}=await r.json();
+      const ids=patients.map(p=>p.id);
+      const total=ids.length;
+      $("massActs").style.display="none";
+      $("massPW").style.display="block";$("massPL").style.display="block";
+      $("massPL").textContent=`Actualizando 0 de ${total}...`;
+      let done=0;
+      for(const id of ids){
+        await fetch(`${API}/patients/${id}`,{method:"PUT",
+          headers:{...AUTH,"Content-Type":"application/json"},
+          body:JSON.stringify({price:val})});
+        done++;
+        $("massPB").style.width=Math.round((done/total)*100)+"%";
+        $("massPL").textContent=`Actualizando ${done} de ${total}...`;}
+      $("massPL").textContent=`✓ ${total} pacientes actualizados`;
+      setTimeout(()=>{$("ovMass").classList.remove("show");load();
+        toast(`${total} precios → ${cop(val)} ✓`,"#22d3a0");},800);};
+
+    // Invoice
+    async function gen(fmt){
+      const r=await fetch(`${API}/patients`,{headers:AUTH});
+      const d=await r.json();
+      if(!d.patients.length){toast("Sin pacientes","#ff4d6a");return;}
+      const num=$("invoiceInput").value.trim()||`FAC-${Date.now().toString().slice(-6)}`;
+      const res=await fetch(`${API}/invoice/${fmt}`,{method:"POST",
+        headers:{...AUTH,"Content-Type":"application/json"},
+        body:JSON.stringify({invoice_number:num})});
+      if(!res.ok){toast("Error al generar","#ff4d6a");return;}
+      const blob=await res.blob();
+      const url=URL.createObjectURL(blob);
+      const a=document.createElement("a");
+      a.href=url;a.download=`Factura_${num}.${fmt==="word"?"docx":"pdf"}`;
+      a.click();setTimeout(()=>URL.revokeObjectURL(url),100);
+      toast(`Factura ${num} generada ✓`);}
+    $("pdfBtn").onclick=()=>gen("pdf");
+    $("docxBtn").onclick=()=>gen("word");
+
+    // History
+    async function loadHistory(){
+      const r=await fetch(`${API}/history`,{headers:AUTH});
+      if(!r.ok)return;
+      const {history}=await r.json();
+      const tb=$("histTbody");tb.innerHTML="";
+      if(!history.length){
+        tb.innerHTML=`<tr><td colspan="5" class="td-empty">
+          <i class="fa fa-clock-rotate-left" style="font-size:28px;display:block;margin-bottom:10px;opacity:.3"></i>
+          No hay facturas generadas aún</td></tr>`;return;}
+      history.forEach(h=>{
+        const tr=document.createElement("tr");tr.className="fade-row";
+        const d=new Date(h.created_at).toLocaleString("es-CO");
+        tr.innerHTML=`<td><span class="hist-badge">${h.invoice_number}</span></td>
+          <td style="font-size:12px;color:var(--muted)">${d}</td>
+          <td style="color:#4f8bff;font-weight:600">${h.patient_count}</td>
+          <td class="td-price">${cop(h.total)}</td>
+          <td><button class="btn btn-primary btn-sm" onclick="dlHist('${h.id}','pdf')"><i class="fa fa-file-pdf"></i></button>
+          <button class="btn btn-word btn-sm" style="margin-left:5px" onclick="dlHist('${h.id}','word')"><i class="fa fa-file-word"></i></button></td>`;
+        tb.appendChild(tr);});}
+
+    async function dlHist(id,fmt){
+      const res=await fetch(`${API}/history/${id}/download/${fmt}`,{headers:AUTH});
+      if(!res.ok){toast("Error","#ff4d6a");return;}
+      const blob=await res.blob();
+      const url=URL.createObjectURL(blob);
+      const a=document.createElement("a");a.href=url;a.download=`Factura_historial.${fmt==="word"?"docx":"pdf"}`;
+      a.click();setTimeout(()=>URL.revokeObjectURL(url),100);}
+
+    $("invoiceInput").value=`FAC-${new Date().getFullYear()}${("0000"+(Date.now()%10000)).slice(-4)}`;
+    load();
+  </script>
 </body>
 </html>

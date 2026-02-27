@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Facturador FL · Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <style>
+    :root{--bg:#060b18;--card:#0d1526;--card2:#111d35;--border:#1a2a45;
+      --text:#dce6f8;--muted:#5a7099;}
+    *{box-sizing:border-box;margin:0;padding:0;}
+    body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;}
+    .dots{position:fixed;inset:0;pointer-events:none;z-index:0;
+      background-image:radial-gradient(rgba(79,139,255,.06) 1px,transparent 1px);
+      background-size:28px 28px;}
+    .bg-glow{position:fixed;inset:0;pointer-events:none;z-index:0;}
+    .bg-glow::before{content:'';position:absolute;width:700px;height:700px;
+      background:radial-gradient(circle,rgba(79,139,255,.09) 0%,transparent 65%);
+      top:-200px;right:-200px;animation:drift 12s ease-in-out infinite alternate;}
+    @keyframes drift{from{transform:translate(0,0)}to{transform:translate(40px,30px)}}
+
+    nav{position:sticky;top:0;z-index:100;background:rgba(6,11,24,.92);
+      border-bottom:1px solid var(--border);
+      display:flex;align-items:center;justify-content:space-between;
+      padding:14px 32px;backdrop-filter:blur(12px);}
+    .nav-brand{display:flex;align-items:center;gap:10px;}
+    .nav-icon{width:36px;height:36px;background:linear-gradient(135deg,#4f8bff,#7c5cff);
+      border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:16px;
+      box-shadow:0 4px 14px rgba(79,139,255,.35);}
+    .nav-name{font-family:'Syne',sans-serif;font-weight:800;font-size:16px;
+      background:linear-gradient(135deg,#dce6f8,#4f8bff);
+      -webkit-background-clip:text;-webkit-text-fill-color:transparent;}
+    .nav-right{display:flex;align-items:center;gap:10px;}
+    .user-chip{display:flex;align-items:center;gap:8px;
+      background:rgba(255,255,255,.05);border:1px solid var(--border);
+      border-radius:999px;padding:6px 14px;}
+    .user-avatar{width:26px;height:26px;border-radius:50%;
+      background:linear-gradient(135deg,#4f8bff,#7c5cff);
+      display:flex;align-items:center;justify-content:center;
+      font-size:11px;font-weight:700;}
+    .user-name{font-size:13px;font-weight:500;}
+    .role-badge{font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;
+      padding:2px 8px;border-radius:999px;}
+    .rb-admin{background:rgba(255,210,70,.15);color:#ffd246;border:1px solid rgba(255,210,70,.25);}
+    .rb-user {background:rgba(79,139,255,.15);color:#4f8bff;border:1px solid rgba(79,139,255,.25);}
+    .btn-logout{background:rgba(255,77,106,.08);border:1px solid rgba(255,77,106,.2);
+      color:#ff6b84;padding:7px 14px;border-radius:8px;font-size:12px;cursor:pointer;
+      display:flex;align-items:center;gap:6px;font-family:'DM Sans',sans-serif;transition:.2s;}
+    .btn-logout:hover{background:rgba(255,77,106,.15);}
+
+    .main{position:relative;z-index:1;max-width:1100px;margin:0 auto;padding:40px 24px;}
+
+    .welcome{text-align:center;margin-bottom:48px;animation:fadeUp .6s ease;}
+    .welcome-date{display:inline-flex;align-items:center;gap:6px;
+      background:rgba(79,139,255,.08);border:1px solid rgba(79,139,255,.18);
+      color:#4f8bff;padding:5px 16px;border-radius:999px;
+      font-size:12px;margin-bottom:16px;}
+    .welcome h1{font-family:'Syne',sans-serif;font-size:36px;font-weight:800;
+      background:linear-gradient(135deg,#dce6f8 40%,#4f8bff);
+      -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+      margin-bottom:8px;}
+    .welcome p{color:var(--muted);font-size:15px;}
+    @keyframes fadeUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:none}}
+
+    .modules-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:20px;}
+
+    .mod-card{background:var(--card);border:1px solid var(--border);border-radius:20px;
+      padding:28px;cursor:pointer;text-decoration:none;color:var(--text);
+      transition:.3s cubic-bezier(.22,.68,0,1.2);position:relative;overflow:hidden;
+      animation:fadeUp .5s ease both;}
+    .mod-card::before{content:'';position:absolute;inset:0;opacity:0;transition:.3s;
+      background:radial-gradient(circle at 30% 30%,rgba(255,255,255,.04),transparent 70%);}
+    .mod-card:hover{transform:translateY(-6px);border-color:var(--mod-color,rgba(79,139,255,.4));
+      box-shadow:0 16px 48px rgba(0,0,0,.4);}
+    .mod-card:hover::before{opacity:1;}
+
+    .mod-icon{width:52px;height:52px;border-radius:14px;
+      display:flex;align-items:center;justify-content:center;font-size:24px;
+      margin-bottom:16px;background:var(--mod-bg,rgba(79,139,255,.12));}
+    .mod-tag{font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.8px;
+      padding:3px 10px;border-radius:999px;margin-bottom:10px;display:inline-block;
+      background:var(--mod-tag-bg);color:var(--mod-tag-color);border:1px solid var(--mod-tag-border);}
+    .mod-title{font-family:'Syne',sans-serif;font-size:18px;font-weight:700;margin-bottom:8px;}
+    .mod-desc{font-size:13px;color:var(--muted);line-height:1.6;}
+    .mod-arrow{margin-top:18px;font-size:13px;color:var(--mod-tag-color,#4f8bff);
+      display:flex;align-items:center;gap:6px;font-weight:600;transition:.2s;}
+    .mod-card:hover .mod-arrow{gap:10px;}
+
+    /* Footer */
+    .page-footer{position:relative;z-index:1;text-align:center;padding:24px;
+      border-top:1px solid var(--border);margin-top:40px;}
+    .footer-copy{font-size:11px;color:var(--muted);margin-bottom:8px;}
+    .footer-copy span{color:rgba(79,139,255,.7);}
+    .wa-btn{display:inline-flex;align-items:center;gap:7px;
+      background:rgba(37,211,102,.08);border:1px solid rgba(37,211,102,.2);
+      color:#25d366;padding:7px 16px;border-radius:999px;
+      font-size:12px;font-weight:600;text-decoration:none;transition:.2s;}
+    .wa-btn:hover{background:rgba(37,211,102,.16);}
+  </style>
+</head>
+<body>
+  <div class="dots"></div>
+  <div class="bg-glow"></div>
+
+  <nav>
+    <div class="nav-brand">
+      <div class="nav-icon">🧾</div>
+      <span class="nav-name">Facturador FL</span>
+    </div>
+    <div class="nav-right">
+      <div class="user-chip">
+        <div class="user-avatar" id="avatarLetter">A</div>
+        <span class="user-name" id="userName">Usuario</span>
+        <span class="role-badge" id="roleBadge">USER</span>
+      </div>
+      <button class="btn-logout" id="btnLogout">
+        <i class="fa fa-arrow-right-from-bracket"></i> Salir
+      </button>
+    </div>
+  </nav>
+
+  <div class="main">
+    <div class="welcome">
+      <div class="welcome-date"><i class="fa fa-calendar-day"></i> <span id="dateStr"></span></div>
+      <h1>¡Bienvenido, <span id="welcomeName">Usuario</span>!</h1>
+      <p>Selecciona el módulo con el que deseas trabajar</p>
+    </div>
+    <div class="modules-grid" id="modulesGrid"></div>
+  </div>
+
+  <div class="page-footer">
+    <div class="footer-copy">© 2026 <span>Felix Linares</span> · Todos los derechos reservados</div>
+    <a class="wa-btn" href="https://wa.me/573183979833" target="_blank">
+      <i class="fab fa-whatsapp"></i> Soporte WhatsApp · 318 397 9833
+    </a>
+  </div>
+
+  <script>
+    const token = localStorage.getItem("token");
+    const user  = JSON.parse(localStorage.getItem("user") || "null");
+    if (!token || !user) { window.location.href = "/"; }
+
+    const modules  = user.modules || [];
+    const isAdmin  = user.role === "admin";
+    const name     = user.name || user.username;
+
+    document.getElementById("userName").textContent    = name;
+    document.getElementById("welcomeName").textContent = name.split(" ")[0];
+    document.getElementById("avatarLetter").textContent= name[0].toUpperCase();
+    const rb = document.getElementById("roleBadge");
+    rb.textContent = isAdmin ? "ADMIN" : "USER";
+    rb.className   = "role-badge " + (isAdmin ? "rb-admin" : "rb-user");
+
+    const days = ["domingo","lunes","martes","miércoles","jueves","viernes","sábado"];
+    const months = ["enero","febrero","marzo","abril","mayo","junio","julio","agosto","septiembre","octubre","noviembre","diciembre"];
+    const now = new Date();
+    document.getElementById("dateStr").textContent =
+      `${days[now.getDay()]}, ${now.getDate()} de ${months[now.getMonth()]} de ${now.getFullYear()}`;
+
+    const MODS = [
+      {
+        id:"medical", href:"/medical",
+        color:"#4f8bff", bg:"rgba(79,139,255,.12)",
+        tagBg:"rgba(79,139,255,.12)", tagColor:"#4f8bff", tagBorder:"rgba(79,139,255,.2)",
+        icon:"🩺", tag:"Clínica",
+        title:"Facturador Médico",
+        desc:"Gestión de pacientes y estudios de polisomnografía. Historial, filtros y exportación PDF/Word.",
+        visible: modules.includes("medical") || isAdmin
+      },
+      {
+        id:"personal", href:"/personal",
+        color:"#22d3a0", bg:"rgba(34,211,160,.12)",
+        tagBg:"rgba(34,211,160,.12)", tagColor:"#22d3a0", tagBorder:"rgba(34,211,160,.2)",
+        icon:"🧾", tag:"Desarrollo",
+        title:"Facturador Personal",
+        desc:"Genera facturas profesionales con múltiples monedas, IVA y estados de pago.",
+        visible: modules.includes("personal") || isAdmin
+      },
+      {
+        id:"tasks", href:"/tasks",
+        color:"#a78bfa", bg:"rgba(167,139,250,.12)",
+        tagBg:"rgba(167,139,250,.12)", tagColor:"#a78bfa", tagBorder:"rgba(167,139,250,.2)",
+        icon:"✅", tag:"Productividad",
+        title:"Mis Tareas",
+        desc:"Gestiona recordatorios, tareas pendientes y actividades con alertas visuales.",
+        visible: modules.includes("tasks") || isAdmin
+      },
+      {
+        id:"admin", href:"/admin",
+        color:"#ffd246", bg:"rgba(255,210,70,.12)",
+        tagBg:"rgba(255,210,70,.12)", tagColor:"#ffd246", tagBorder:"rgba(255,210,70,.2)",
+        icon:"⚙️", tag:"Administración",
+        title:"Panel de Admin",
+        desc:"Gestión de usuarios, permisos, módulos y configuración del sistema.",
+        visible: isAdmin
+      }
+    ];
+
+    const grid = document.getElementById("modulesGrid");
+    MODS.filter(m=>m.visible).forEach((m,i) => {
+      const a = document.createElement("a");
+      a.href = m.href;
+      a.className = "mod-card";
+      a.style.cssText = `--mod-color:${m.color};--mod-bg:${m.bg};--mod-tag-bg:${m.tagBg};--mod-tag-color:${m.tagColor};--mod-tag-border:${m.tagBorder};animation-delay:${i*.08}s`;
+      a.innerHTML = `
+        <div class="mod-icon">${m.icon}</div>
+        <div class="mod-tag">${m.tag}</div>
+        <div class="mod-title">${m.title}</div>
+        <div class="mod-desc">${m.desc}</div>
+        <div class="mod-arrow"><span>Abrir módulo</span><i class="fa fa-arrow-right"></i></div>
+      `;
+      grid.appendChild(a);
+    });
+
+    document.getElementById("btnLogout").onclick = async () => {
+      await fetch("/api/auth/logout", {method:"POST", headers:{Authorization:`Bearer ${token}`}});
+      localStorage.clear();
+      window.location.href = "/";
+    };
+  </script>
+</body>
+</html>

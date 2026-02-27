@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Facturador FL · Iniciar Sesión</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <style>
+    :root {
+      --bg:#060b18; --card:#0d1526; --border:#1a2a45;
+      --accent:#4f8bff; --accent2:#7c5cff;
+      --text:#dce6f8; --muted:#5a7099;
+      --success:#22d3a0; --danger:#ff4d6a;
+    }
+    *{box-sizing:border-box;margin:0;padding:0;}
+    body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);
+      min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;
+      position:relative;overflow:hidden;}
+
+    /* Animated background */
+    .bg-wrap{position:fixed;inset:0;z-index:0;}
+    .bg-wrap canvas{width:100%;height:100%;}
+    .bg-glow{position:fixed;inset:0;pointer-events:none;z-index:0;}
+    .bg-glow::before{content:'';position:absolute;width:700px;height:700px;
+      background:radial-gradient(circle,rgba(79,139,255,.12) 0%,transparent 65%);
+      top:-200px;left:-200px;animation:drift1 12s ease-in-out infinite alternate;}
+    .bg-glow::after{content:'';position:absolute;width:500px;height:500px;
+      background:radial-gradient(circle,rgba(124,92,255,.1) 0%,transparent 65%);
+      bottom:-150px;right:-100px;animation:drift2 9s ease-in-out infinite alternate;}
+    @keyframes drift1{from{transform:translate(0,0)}to{transform:translate(60px,40px)}}
+    @keyframes drift2{from{transform:translate(0,0)}to{transform:translate(-40px,30px)}}
+    .dots{position:fixed;inset:0;pointer-events:none;z-index:0;
+      background-image:radial-gradient(rgba(79,139,255,.06) 1px,transparent 1px);
+      background-size:28px 28px;}
+
+    /* Card */
+    .card{position:relative;z-index:10;background:rgba(13,21,38,.85);
+      border:1px solid var(--border);border-radius:24px;padding:44px 40px;
+      width:100%;max-width:420px;backdrop-filter:blur(20px);
+      box-shadow:0 32px 80px rgba(0,0,0,.6);
+      animation:cardIn .6s cubic-bezier(.22,.68,0,1.2) both;}
+    @keyframes cardIn{from{opacity:0;transform:translateY(30px) scale(.97)}to{opacity:1;transform:none}}
+
+    /* Logo */
+    .logo-wrap{text-align:center;margin-bottom:28px;}
+    .logo-icon{width:64px;height:64px;margin:0 auto 14px;
+      background:linear-gradient(135deg,#4f8bff,#7c5cff);
+      border-radius:18px;display:flex;align-items:center;justify-content:center;
+      font-size:28px;box-shadow:0 8px 28px rgba(79,139,255,.4);
+      animation:pulse 3s ease-in-out infinite;}
+    @keyframes pulse{0%,100%{box-shadow:0 8px 28px rgba(79,139,255,.4)}50%{box-shadow:0 8px 40px rgba(79,139,255,.7)}}
+    .logo-name{font-family:'Syne',sans-serif;font-size:26px;font-weight:800;
+      background:linear-gradient(135deg,#dce6f8,#4f8bff);
+      -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+      letter-spacing:-.5px;}
+    .logo-sub{font-size:12px;color:var(--muted);margin-top:4px;letter-spacing:.5px;}
+
+    /* Form */
+    .field{margin-bottom:16px;}
+    .field label{display:block;font-size:10px;font-weight:700;color:var(--muted);
+      text-transform:uppercase;letter-spacing:.8px;margin-bottom:7px;}
+    .input-wrap{position:relative;}
+    .input-wrap i{position:absolute;left:14px;top:50%;transform:translateY(-50%);
+      color:var(--muted);font-size:14px;pointer-events:none;}
+    .field input{width:100%;background:rgba(255,255,255,.04);border:1px solid var(--border);
+      border-radius:10px;padding:12px 14px 12px 40px;font-size:14px;color:var(--text);
+      font-family:'DM Sans',sans-serif;outline:none;transition:.25s;}
+    .field input:focus{border-color:var(--accent);background:rgba(79,139,255,.06);
+      box-shadow:0 0 0 3px rgba(79,139,255,.15);}
+    .field input::placeholder{color:var(--muted);}
+
+    /* Button */
+    .btn-login{width:100%;background:linear-gradient(135deg,#4f8bff,#7c5cff);
+      border:none;color:#fff;padding:13px;border-radius:11px;
+      font-size:15px;font-weight:700;cursor:pointer;letter-spacing:.3px;
+      font-family:'Syne',sans-serif;transition:.25s;margin-top:4px;
+      box-shadow:0 6px 20px rgba(79,139,255,.35);}
+    .btn-login:hover{transform:translateY(-2px);box-shadow:0 10px 30px rgba(79,139,255,.5);}
+    .btn-login:active{transform:scale(.98);}
+
+    /* Error */
+    .error-msg{background:rgba(255,77,106,.1);border:1px solid rgba(255,77,106,.25);
+      color:#ff8099;border-radius:9px;padding:10px 14px;font-size:13px;
+      margin-top:14px;display:none;align-items:center;gap:8px;}
+    .error-msg.show{display:flex;}
+
+    /* Footer */
+    .footer{position:relative;z-index:10;margin-top:28px;text-align:center;}
+    .copyright{font-size:11px;color:var(--muted);margin-bottom:10px;}
+    .copyright span{color:rgba(79,139,255,.7);}
+    .wa-btn{display:inline-flex;align-items:center;gap:8px;
+      background:rgba(37,211,102,.1);border:1px solid rgba(37,211,102,.25);
+      color:#25d366;padding:8px 18px;border-radius:999px;
+      font-size:12px;font-weight:600;text-decoration:none;transition:.2s;}
+    .wa-btn:hover{background:rgba(37,211,102,.2);transform:translateY(-1px);}
+    .wa-btn i{font-size:14px;}
+  </style>
+</head>
+<body>
+  <div class="dots"></div>
+  <div class="bg-glow"></div>
+
+  <div class="card">
+    <div class="logo-wrap">
+      <div class="logo-icon">🧾</div>
+      <div class="logo-name">Facturador FL</div>
+      <div class="logo-sub">Sistema de facturación inteligente</div>
+    </div>
+
+    <div class="field">
+      <label>Usuario</label>
+      <div class="input-wrap">
+        <i class="fa fa-user"></i>
+        <input id="usr" type="text" placeholder="Ingresa tu usuario" autocomplete="username">
+      </div>
+    </div>
+    <div class="field">
+      <label>Contraseña</label>
+      <div class="input-wrap">
+        <i class="fa fa-lock"></i>
+        <input id="pwd" type="password" placeholder="••••••••" autocomplete="current-password">
+      </div>
+    </div>
+
+    <button class="btn-login" id="btnLogin">
+      <i class="fa fa-arrow-right-to-bracket"></i> Iniciar Sesión
+    </button>
+
+    <div class="error-msg" id="errMsg">
+      <i class="fa fa-circle-exclamation"></i>
+      <span id="errTxt">Usuario o contraseña incorrectos</span>
+    </div>
+  </div>
+
+  <div class="footer">
+    <div class="copyright">© 2026 <span>Felix Linares</span> · Todos los derechos reservados</div>
+    <a class="wa-btn" href="https://wa.me/573183979833" target="_blank">
+      <i class="fab fa-whatsapp"></i> Soporte WhatsApp
+    </a>
+  </div>
+
+  <script>
+    const btn = document.getElementById("btnLogin");
+    const err = document.getElementById("errMsg");
+    const errTxt = document.getElementById("errTxt");
+
+    async function doLogin() {
+      const usr = document.getElementById("usr").value.trim();
+      const pwd = document.getElementById("pwd").value;
+      if (!usr || !pwd) { showErr("Completa todos los campos"); return; }
+      btn.innerHTML = '<i class="fa fa-spinner fa-spin"></i> Ingresando...';
+      btn.disabled = true;
+      try {
+        const res = await fetch("/api/auth/login", {
+          method:"POST", headers:{"Content-Type":"application/json"},
+          body: JSON.stringify({username:usr, password:pwd})
+        });
+        const data = await res.json();
+        if (!res.ok) { showErr(data.error || "Error al iniciar sesión"); return; }
+        localStorage.setItem("token", data.token);
+        localStorage.setItem("user", JSON.stringify(data.user));
+        window.location.href = "/dashboard";
+      } catch(e) {
+        showErr("Error de conexión con el servidor");
+      } finally {
+        btn.innerHTML = '<i class="fa fa-arrow-right-to-bracket"></i> Iniciar Sesión';
+        btn.disabled = false;
+      }
+    }
+
+    function showErr(msg) {
+      errTxt.textContent = msg;
+      err.classList.add("show");
+      setTimeout(()=>err.classList.remove("show"), 4000);
+    }
+
+    btn.onclick = doLogin;
+    document.addEventListener("keydown", e => { if(e.key==="Enter") doLogin(); });
+  </script>
+</body>
+</html>

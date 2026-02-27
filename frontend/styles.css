@@ -1,11 +1,15 @@
+/* ═══════════════════════════════════════════════════════
+   styles.css  –  Facturador Pro v2
+   Estilos del módulo médico (sin cambios en lógica original)
+   ═══════════════════════════════════════════════════════ */
 :root {
-  --pri: #3498db;
-  --succ:#27ae60;
-  --danger:#e74c3c;
-  --warn:#f39c12;
-  --info:#2b579a;
-  --light:#eef2f4;
-  --dark:#2c3e50;
+  --pri:    #3498db;
+  --succ:   #27ae60;
+  --danger: #e74c3c;
+  --warn:   #f39c12;
+  --info:   #2b579a;
+  --light:  #eef2f4;
+  --dark:   #2c3e50;
 }
 * {
   box-sizing: border-box;
@@ -21,9 +25,10 @@ body {
   margin: auto;
   padding: 1rem;
 }
+
 /* Header */
 .header {
-  background: linear-gradient(135deg,#6a11cb 0%,#2575fc 100%);
+  background: linear-gradient(135deg, #6a11cb 0%, #2575fc 100%);
   color: #fff;
   border-radius: 12px;
   text-align: center;
@@ -50,13 +55,24 @@ body {
   align-items: center;
   gap: .4rem;
   transition: .2s;
+  font-family: inherit;
+  font-size: 14px;
 }
 .btn:hover { transform: translateY(-1px); opacity: .92; }
-.btn-primary{ background: var(--pri); }
-.btn-success{ background: var(--succ); }
-.btn-danger { background: var(--danger); }
-.btn-warning{ background: var(--warn); }
-.btn-info   { background: var(--info); }
+.btn-primary { background: var(--pri); }
+.btn-success { background: var(--succ); }
+.btn-danger  { background: var(--danger); }
+.btn-warning { background: var(--warn); }
+.btn-info    { background: var(--info); }
+.btn-sm      { padding: .35rem .7rem; font-size: 12px; }
+
+/* Actions row */
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .5rem;
+  margin-bottom: .8rem;
+}
 
 /* Cards & Forms */
 .card {
@@ -72,17 +88,23 @@ body {
   margin: .4rem 0;
   border: 1px solid #ccc;
   border-radius: 5px;
+  font-size: 14px;
+}
+.btn-row {
+  display: flex;
+  gap: .5rem;
+  margin-top: .5rem;
 }
 
 /* Summary */
 .summary {
   display: grid;
-  grid-template-columns: repeat(2,1fr);
+  grid-template-columns: repeat(2, 1fr);
   gap: .5rem;
 }
 .summary .card { text-align: center; }
 .summary h4 { margin: .2rem 0 0; font-weight: 500; color: #666; }
-.summary p { font-size: 1.8rem; margin: .2rem 0; font-weight: 700; }
+.summary p  { font-size: 1.8rem; margin: .2rem 0; font-weight: 700; }
 
 /* Table */
 .table {
@@ -125,15 +147,17 @@ body {
 dialog {
   border: none;
   border-radius: 10px;
-  padding: 1rem;
-  max-width: 320px;
+  padding: 1.5rem;
+  max-width: 360px;
+  width: 100%;
+  box-shadow: 0 10px 40px rgba(0,0,0,.25);
 }
-dialog::backdrop {
-  background: #0005;
-}
+dialog::backdrop { background: #0005; }
+dialog h3 { margin: 0 0 1rem; font-size: 16px; }
 
 /* Row animation */
-.fade {
-  animation: fadeInRow .3s;
+.fade { animation: fadeInRow .3s; }
+@keyframes fadeInRow {
+  from { opacity:0; transform:translateY(-3px); }
+  to   { opacity:1; transform:none; }
 }
-@keyframes fadeInRow { from {opacity:0;transform:translateY(-3px)} to {opacity:1;transform:none} }

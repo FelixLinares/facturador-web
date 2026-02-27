@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Panel Admin · Facturador FL</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=Space+Grotesk:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <style>
+    :root {
+      --bg:#080d1a; --card:#0f1628; --card2:#131f38;
+      --border:#1e2d4d; --accent:#ffd246; --text:#e8edf8; --muted:#6b7fa3;
+    }
+    * { box-sizing:border-box; margin:0; padding:0; }
+    body { font-family:'DM Sans',sans-serif; background:var(--bg); color:var(--text); min-height:100vh; }
+
+    nav {
+      background:rgba(8,13,26,.95); border-bottom:1px solid var(--border);
+      display:flex; align-items:center; justify-content:space-between;
+      padding:14px 32px; position:sticky; top:0; z-index:100; backdrop-filter:blur(10px);
+    }
+    .nav-left { display:flex; align-items:center; gap:12px; }
+    .nav-icon {
+      width:36px; height:36px; border-radius:10px;
+      background:linear-gradient(135deg,#ffd246,#ff9500);
+      display:flex; align-items:center; justify-content:center; font-size:17px;
+    }
+    .nav-title { font-family:'Space Grotesk',sans-serif; font-weight:700; font-size:16px; }
+    .nav-tag {
+      background:rgba(255,210,70,.12); color:#ffd246;
+      border:1px solid rgba(255,210,70,.25);
+      font-size:10px; font-weight:700; padding:2px 10px; border-radius:999px;
+      text-transform:uppercase; letter-spacing:.5px;
+    }
+    .btn-nav {
+      background:rgba(255,255,255,.05); border:1px solid var(--border);
+      color:var(--muted); padding:7px 14px; border-radius:8px;
+      font-size:13px; cursor:pointer; display:flex; align-items:center; gap:6px;
+      transition:.2s; font-family:'DM Sans',sans-serif;
+    }
+    .btn-nav:hover { background:rgba(255,255,255,.09); color:var(--text); }
+
+    main { max-width:1000px; margin:0 auto; padding:32px 24px; }
+
+    .page-header {
+      display:flex; align-items:center; justify-content:space-between;
+      margin-bottom:28px;
+    }
+    .page-header h2 {
+      font-family:'Space Grotesk',sans-serif; font-size:22px; font-weight:700;
+    }
+    .page-header p { color:var(--muted); font-size:13px; margin-top:3px; }
+
+    .btn-primary {
+      background:linear-gradient(135deg,#ffd246,#ff9500);
+      border:none; color:#1a1000; padding:10px 20px; border-radius:10px;
+      font-size:13px; font-weight:700; cursor:pointer;
+      display:flex; align-items:center; gap:7px; font-family:'DM Sans',sans-serif;
+      transition:.2s; box-shadow:0 4px 16px rgba(255,210,70,.3);
+    }
+    .btn-primary:hover { transform:translateY(-1px); box-shadow:0 6px 22px rgba(255,210,70,.4); }
+
+    /* Stats */
+    .stats { display:grid; grid-template-columns:repeat(3,1fr); gap:16px; margin-bottom:28px; }
+    .stat-card {
+      background:var(--card); border:1px solid var(--border); border-radius:14px;
+      padding:20px; text-align:center;
+    }
+    .stat-card .val { font-size:32px; font-weight:700; font-family:'Space Grotesk',sans-serif; }
+    .stat-card .lbl { font-size:12px; color:var(--muted); margin-top:4px; }
+    .stat-total  .val { color:#ffd246; }
+    .stat-active .val { color:#2dd4a0; }
+    .stat-blocked.val { color:#ff4d6a; }
+
+    /* Users table */
+    .users-wrap {
+      background:var(--card); border:1px solid var(--border); border-radius:16px;
+      overflow:hidden;
+    }
+    .users-wrap table { width:100%; border-collapse:collapse; }
+    .users-wrap thead th {
+      background:#0d1b3e; padding:12px 18px;
+      font-size:11px; font-weight:700; color:var(--muted);
+      text-transform:uppercase; letter-spacing:.5px; text-align:left;
+    }
+    .users-wrap tbody tr { border-bottom:1px solid var(--border); transition:.15s; }
+    .users-wrap tbody tr:last-child { border-bottom:none; }
+    .users-wrap tbody tr:hover { background:rgba(255,255,255,.02); }
+    .users-wrap td { padding:14px 18px; font-size:13px; }
+
+    .user-cell { display:flex; align-items:center; gap:10px; }
+    .avatar {
+      width:36px; height:36px; border-radius:50%;
+      background:linear-gradient(135deg,#3d7fff,#7b5bff);
+      display:flex; align-items:center; justify-content:center;
+      font-size:14px; font-weight:700; flex-shrink:0;
+    }
+    .avatar.admin { background:linear-gradient(135deg,#ffd246,#ff9500); color:#1a1000; }
+    .user-name { font-weight:600; }
+    .user-uname { font-size:12px; color:var(--muted); }
+
+    .badge {
+      display:inline-block; font-size:10px; font-weight:700;
+      padding:3px 10px; border-radius:999px;
+      text-transform:uppercase; letter-spacing:.4px;
+    }
+    .badge-admin   { background:rgba(255,210,70,.15); color:#ffd246; border:1px solid rgba(255,210,70,.25); }
+    .badge-user    { background:rgba(61,127,255,.12); color:#5b9bff; border:1px solid rgba(61,127,255,.25); }
+    .badge-active  { background:rgba(45,212,160,.12); color:#2dd4a0; border:1px solid rgba(45,212,160,.25); }
+    .badge-blocked { background:rgba(255,77,106,.12); color:#ff4d6a; border:1px solid rgba(255,77,106,.25); }
+
+    .mod-pills { display:flex; gap:4px; flex-wrap:wrap; }
+    .mod-pill {
+      font-size:10px; padding:2px 8px; border-radius:999px;
+      background:rgba(61,127,255,.1); color:#5b9bff;
+      border:1px solid rgba(61,127,255,.2);
+    }
+
+    .actions-cell { display:flex; gap:6px; }
+    .btn-action {
+      padding:6px 12px; border-radius:7px; border:none; cursor:pointer;
+      font-size:12px; font-weight:500; font-family:'DM Sans',sans-serif;
+      display:flex; align-items:center; gap:5px; transition:.2s;
+    }
+    .btn-edit    { background:rgba(61,127,255,.12); color:#5b9bff; }
+    .btn-edit:hover    { background:rgba(61,127,255,.22); }
+    .btn-toggle  { background:rgba(255,180,0,.1); color:#ffb400; }
+    .btn-toggle:hover  { background:rgba(255,180,0,.2); }
+    .btn-toggle.block  { background:rgba(255,77,106,.1); color:#ff4d6a; }
+    .btn-toggle.block:hover { background:rgba(255,77,106,.2); }
+    .btn-del-u   { background:rgba(255,77,106,.08); color:#ff4d6a; }
+    .btn-del-u:hover   { background:rgba(255,77,106,.18); }
+
+    /* Modal */
+    .overlay {
+      position:fixed; inset:0; background:rgba(0,0,0,.65);
+      display:none; align-items:center; justify-content:center;
+      z-index:200; backdrop-filter:blur(4px);
+    }
+    .overlay.show { display:flex; }
+    .modal-box {
+      background:var(--card); border:1px solid var(--border);
+      border-radius:18px; padding:32px;
+      width:100%; max-width:460px;
+      animation:modalIn .25s ease;
+    }
+    @keyframes modalIn {
+      from { opacity:0; transform:scale(.95); }
+      to   { opacity:1; transform:scale(1); }
+    }
+    .modal-box h3 {
+      font-family:'Space Grotesk',sans-serif; font-size:18px; font-weight:700;
+      margin-bottom:22px; display:flex; align-items:center; gap:8px;
+    }
+    .mfield { margin-bottom:14px; }
+    .mfield label {
+      display:block; font-size:11px; font-weight:700; color:var(--muted);
+      text-transform:uppercase; letter-spacing:.5px; margin-bottom:6px;
+    }
+    .mfield input, .mfield select {
+      width:100%; background:rgba(255,255,255,.05);
+      border:1px solid var(--border); border-radius:8px;
+      padding:10px 13px; font-size:13px; color:var(--text);
+      font-family:'DM Sans',sans-serif; outline:none; transition:.2s;
+    }
+    .mfield input:focus, .mfield select:focus {
+      border-color:#ffd246; box-shadow:0 0 0 2px rgba(255,210,70,.15);
+    }
+    .mfield input::placeholder { color:var(--muted); }
+    .mfield select option { background:#1a2540; }
+
+    .mod-checkboxes { display:flex; gap:10px; flex-wrap:wrap; margin-top:6px; }
+    .mod-check {
+      display:flex; align-items:center; gap:6px;
+      background:rgba(255,255,255,.04); border:1px solid var(--border);
+      padding:8px 14px; border-radius:8px; cursor:pointer;
+      font-size:13px; transition:.2s;
+    }
+    .mod-check:hover { border-color:#ffd246; }
+    .mod-check input { width:auto; }
+
+    .modal-actions { display:flex; gap:10px; margin-top:22px; }
+    .btn-modal-save {
+      flex:1; background:linear-gradient(135deg,#ffd246,#ff9500);
+      border:none; color:#1a1000; padding:12px; border-radius:9px;
+      font-size:14px; font-weight:700; cursor:pointer; font-family:'DM Sans',sans-serif; transition:.2s;
+    }
+    .btn-modal-save:hover { opacity:.9; }
+    .btn-modal-cancel {
+      background:rgba(255,255,255,.05); border:1px solid var(--border);
+      color:var(--muted); padding:12px 18px; border-radius:9px;
+      cursor:pointer; font-family:'DM Sans',sans-serif; font-size:14px; transition:.2s;
+    }
+    .btn-modal-cancel:hover { color:var(--text); }
+
+    .toast {
+      position:fixed; bottom:24px; right:24px;
+      background:#1a2c50; border:1px solid #ffd246;
+      color:var(--text); padding:12px 20px; border-radius:10px;
+      font-size:13px; display:flex; align-items:center; gap:8px;
+      z-index:999; animation:slideIn .3s ease; box-shadow:0 8px 24px rgba(0,0,0,.4);
+    }
+    @keyframes slideIn { from{transform:translateX(100px);opacity:0} to{transform:none;opacity:1} }
+  </style>
+</head>
+<body>
+  <nav>
+    <div class="nav-left">
+      <div class="nav-icon">⚙️</div>
+      <span class="nav-title">Panel de Administración</span>
+      <span class="nav-tag">Admin</span>
+    </div>
+    <div style="display:flex;gap:10px">
+      <button class="btn-nav" onclick="window.location.href='/dashboard'">
+        <i class="fa fa-grid-2"></i> Dashboard
+      </button>
+    </div>
+  </nav>
+
+  <main>
+    <div class="page-header">
+      <div>
+        <h2>Gestión de Usuarios</h2>
+        <p>Administra accesos, permisos y módulos del sistema</p>
+      </div>
+      <button class="btn-primary" id="btnNewUser">
+        <i class="fa fa-user-plus"></i> Nuevo Usuario
+      </button>
+    </div>
+
+    <div class="stats">
+      <div class="stat-card stat-total">
+        <div class="val" id="statTotal">–</div>
+        <div class="lbl">Total usuarios</div>
+      </div>
+      <div class="stat-card stat-active">
+        <div class="val" id="statActive">–</div>
+        <div class="lbl">Activos</div>
+      </div>
+      <div class="stat-card stat-blocked">
+        <div class="val" id="statBlocked">–</div>
+        <div class="lbl">Bloqueados</div>
+      </div>
+    </div>
+
+    <div class="users-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Usuario</th>
+            <th>Rol</th>
+            <th>Estado</th>
+            <th>Módulos</th>
+            <th>Creado</th>
+            <th>Acciones</th>
+          </tr>
+        </thead>
+        <tbody id="usersTbody"></tbody>
+      </table>
+    </div>
+  </main>
+
+  <!-- Modal crear/editar -->
+  <div class="overlay" id="overlay">
+    <div class="modal-box">
+      <h3 id="modalTitle"><i class="fa fa-user-gear" style="color:#ffd246"></i> Nuevo Usuario</h3>
+
+      <div class="mfield">
+        <label>Nombre completo</label>
+        <input id="mName" placeholder="Ej: Dr. Pérez García">
+      </div>
+      <div class="mfield">
+        <label>Usuario</label>
+        <input id="mUsername" placeholder="usuario123">
+      </div>
+      <div class="mfield">
+        <label>Contraseña <span id="pwdHint" style="font-size:10px;color:var(--muted);text-transform:none">(dejar vacío para no cambiar)</span></label>
+        <input id="mPassword" type="password" placeholder="••••••••">
+      </div>
+      <div class="mfield">
+        <label>Rol</label>
+        <select id="mRole">
+          <option value="user">Usuario</option>
+          <option value="admin">Administrador</option>
+        </select>
+      </div>
+      <div class="mfield">
+        <label>Módulos permitidos</label>
+        <div class="mod-checkboxes">
+          <label class="mod-check">
+            <input type="checkbox" id="mMedical" value="medical"> 🩺 Facturador Médico
+          </label>
+          <label class="mod-check">
+            <input type="checkbox" id="mPersonal" value="personal"> 💼 Facturador Personal
+          </label>
+        </div>
+      </div>
+
+      <div class="modal-actions">
+        <button class="btn-modal-save"   id="btnModalSave">Guardar</button>
+        <button class="btn-modal-cancel" id="btnModalCancel">Cancelar</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const token = localStorage.getItem("token");
+    const me    = JSON.parse(localStorage.getItem("user") || "null");
+    if (!token || !me || me.role !== "admin") { window.location.href = "/dashboard"; }
+    const AUTH = { Authorization: `Bearer ${token}` };
+
+    let users    = [];
+    let editUID  = null;
+
+    const $ = id => document.getElementById(id);
+
+    function toast(msg, color="#ffd246") {
+      const d = document.createElement("div");
+      d.className="toast"; d.style.borderColor=color;
+      d.innerHTML=`<i class="fa fa-star" style="color:${color}"></i> ${msg}`;
+      document.body.appendChild(d);
+      setTimeout(()=>d.remove(),2800);
+    }
+
+    async function loadUsers() {
+      const res  = await fetch("/api/admin/users", { headers: AUTH });
+      if (res.status===403 || res.status===401) { window.location.href="/"; return; }
+      const data = await res.json();
+      users = data.users || [];
+      renderStats();
+      renderTable();
+    }
+
+    function renderStats() {
+      $("statTotal").textContent   = users.length;
+      $("statActive").textContent  = users.filter(u=>u.active).length;
+      $("statBlocked").textContent = users.filter(u=>!u.active).length;
+    }
+
+    function renderTable() {
+      const tb = $("usersTbody");
+      tb.innerHTML = "";
+      users.forEach(u => {
+        const isMe = u.id === me.id;
+        const created = new Date(u.created).toLocaleDateString("es-CO",{day:"2-digit",month:"short",year:"numeric"});
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td>
+            <div class="user-cell">
+              <div class="avatar ${u.role==='admin'?'admin':''}">${(u.name||"?")[0].toUpperCase()}</div>
+              <div>
+                <div class="user-name">${u.name} ${isMe?'<span style="font-size:10px;color:#ffd246">(tú)</span>':''}</div>
+                <div class="user-uname">@${u.username}</div>
+              </div>
+            </div>
+          </td>
+          <td><span class="badge badge-${u.role}">${u.role}</span></td>
+          <td><span class="badge badge-${u.active?'active':'blocked'}">${u.active?'Activo':'Bloqueado'}</span></td>
+          <td>
+            <div class="mod-pills">
+              ${(u.modules||[]).map(m=>`<span class="mod-pill">${m==='medical'?'🩺 Médico':'💼 Personal'}</span>`).join('')}
+              ${u.role==='admin'?'<span class="mod-pill" style="color:#ffd246;border-color:rgba(255,210,70,.3)">⚙️ Admin</span>':''}
+            </div>
+          </td>
+          <td style="color:var(--muted);font-size:12px">${created}</td>
+          <td>
+            <div class="actions-cell">
+              <button class="btn-action btn-edit" data-id="${u.id}"><i class="fa fa-pen"></i> Editar</button>
+              ${!isMe ? `
+                <button class="btn-action btn-toggle ${u.active?'block':''}" data-id="${u.id}">
+                  <i class="fa fa-${u.active?'lock':'unlock'}"></i> ${u.active?'Bloquear':'Activar'}
+                </button>
+                ${u.username!=='admin'?`<button class="btn-action btn-del-u" data-id="${u.id}"><i class="fa fa-trash"></i></button>`:''}
+              ` : ''}
+            </div>
+          </td>
+        `;
+        tb.appendChild(tr);
+      });
+
+      // Events
+      tb.querySelectorAll(".btn-edit").forEach(b => {
+        b.onclick = () => openEditModal(b.dataset.id);
+      });
+      tb.querySelectorAll(".btn-toggle").forEach(b => {
+        b.onclick = () => toggleUser(b.dataset.id);
+      });
+      tb.querySelectorAll(".btn-del-u").forEach(b => {
+        b.onclick = () => deleteUser(b.dataset.id);
+      });
+    }
+
+    function openNewModal() {
+      editUID = null;
+      $("modalTitle").innerHTML = `<i class="fa fa-user-plus" style="color:#ffd246"></i> Nuevo Usuario`;
+      $("mName").value=""; $("mUsername").value=""; $("mPassword").value="";
+      $("mRole").value="user";
+      $("mMedical").checked=true; $("mPersonal").checked=false;
+      $("pwdHint").style.display="none";
+      $("mUsername").disabled=false;
+      $("overlay").classList.add("show");
+    }
+
+    function openEditModal(uid) {
+      const u = users.find(x=>x.id===uid);
+      if(!u) return;
+      editUID = uid;
+      $("modalTitle").innerHTML = `<i class="fa fa-user-gear" style="color:#ffd246"></i> Editar: ${u.name}`;
+      $("mName").value     = u.name||"";
+      $("mUsername").value = u.username||"";
+      $("mUsername").disabled = true;
+      $("mPassword").value = "";
+      $("mRole").value     = u.role||"user";
+      $("mMedical").checked  = (u.modules||[]).includes("medical");
+      $("mPersonal").checked = (u.modules||[]).includes("personal");
+      $("pwdHint").style.display="inline";
+      $("overlay").classList.add("show");
+    }
+
+    $("btnNewUser").onclick   = openNewModal;
+    $("btnModalCancel").onclick = () => $("overlay").classList.remove("show");
+    $("overlay").onclick = e => { if(e.target===$("overlay")) $("overlay").classList.remove("show"); };
+
+    $("btnModalSave").onclick = async () => {
+      const mods = [];
+      if($("mMedical").checked)  mods.push("medical");
+      if($("mPersonal").checked) mods.push("personal");
+
+      const body = {
+        name:     $("mName").value.trim(),
+        role:     $("mRole").value,
+        modules:  mods
+      };
+      if(!editUID) {
+        body.username = $("mUsername").value.trim();
+        body.password = $("mPassword").value.trim();
+        if(!body.username||!body.password||!body.name){
+          toast("Completa todos los campos","#ff4d6a"); return;
+        }
+      } else {
+        if($("mPassword").value.trim()) body.password=$("mPassword").value.trim();
+        if(!body.name){ toast("El nombre es requerido","#ff4d6a"); return; }
+      }
+
+      const url    = editUID ? `/api/admin/users/${editUID}` : "/api/admin/users";
+      const method = editUID ? "PUT" : "POST";
+      const res    = await fetch(url,{method,headers:{...AUTH,"Content-Type":"application/json"},body:JSON.stringify(body)});
+      if(!res.ok){ const d=await res.json(); toast(d.error||"Error","#ff4d6a"); return; }
+      $("overlay").classList.remove("show");
+      await loadUsers();
+      toast(editUID?"Usuario actualizado ✓":"Usuario creado ✓");
+    };
+
+    async function toggleUser(uid) {
+      const res  = await fetch(`/api/admin/users/${uid}/toggle`,{method:"POST",headers:AUTH});
+      const data = await res.json();
+      if(!res.ok){ toast(data.error||"Error","#ff4d6a"); return; }
+      await loadUsers();
+      toast(data.active?"Usuario activado ✓":"Usuario bloqueado");
+    }
+
+    async function deleteUser(uid) {
+      const u = users.find(x=>x.id===uid);
+      if(!confirm(`¿Eliminar al usuario "${u?.name}"? Esta acción no se puede deshacer.`)) return;
+      const res = await fetch(`/api/admin/users/${uid}`,{method:"DELETE",headers:AUTH});
+      if(!res.ok){ toast("Error al eliminar","#ff4d6a"); return; }
+      await loadUsers();
+      toast("Usuario eliminado");
+    }
+
+    loadUsers();
+  </script>
+<div style="position:fixed;bottom:16px;left:50%;transform:translateX(-50%);z-index:50;display:flex;gap:12px;align-items:center;pointer-events:none"><span style="font-size:10px;color:#2a3a5a;pointer-events:none">© 2026 Felix Linares</span><a href="https://wa.me/573183979833" target="_blank" style="display:flex;align-items:center;gap:5px;background:rgba(37,211,102,.1);border:1px solid rgba(37,211,102,.2);color:#25d366;padding:5px 12px;border-radius:999px;font-size:11px;font-weight:600;text-decoration:none;pointer-events:all"><i class="fab fa-whatsapp"></i> Soporte</a></div></body>
+</html>
