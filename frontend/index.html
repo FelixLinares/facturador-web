@@ -298,7 +298,7 @@
       <h3><i class="fa fa-tags" style="color:#f59e0b"></i> Edición Masiva de Precios</h3>
       <div class="mass-info">
         <i class="fa fa-circle-info"></i>
-        <span><strong id="massCount">0</strong> pacientes · precio actual: <strong id="massCurrent">–</strong></span>
+        <div><strong id="massCount">0</strong> pacientes</div><div style="margin-top:4px;font-size:12px">Precios actuales: <strong id="massCurrent">–</strong></div>
       </div>
       <div class="mf"><label>Nuevo precio para TODOS los pacientes</label>
         <input id="massPrice" placeholder="Ej: 100000" type="number" min="0"></div>
@@ -435,7 +435,8 @@
       const prices=patients.map(p=>p.price);
       const uniq=[...new Set(prices)];
       $("massCount").textContent=patients.length;
-      $("massCurrent").textContent=uniq.length===1?cop(uniq[0]):"precios mixtos";
+      const desglose=uniq.length===1?cop(uniq[0]):uniq.sort((a,b)=>a-b).map(price=>{const cnt=prices.filter(p=>p===price).length;return cnt+" a "+cop(price);}).join(" · ");
+      $("massCurrent").textContent=desglose;
       $("massPrice").value="";
       $("massPW").style.display="none";$("massPB").style.width="0%";
       $("massPL").style.display="none";$("massActs").style.display="flex";
