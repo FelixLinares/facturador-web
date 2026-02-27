@@ -98,6 +98,18 @@
       color:#25d366;padding:7px 16px;border-radius:999px;
       font-size:12px;font-weight:600;text-decoration:none;transition:.2s;}
     .wa-btn:hover{background:rgba(37,211,102,.16);}
+
+    @media(max-width:600px){
+      nav{padding:10px 14px;}
+      .nav-name{font-size:14px;}
+      .user-chip .user-name{display:none;}
+      .btn-logout span{display:none;}
+      .main{padding:20px 14px;}
+      .welcome h1{font-size:24px;}
+      .welcome p{font-size:13px;}
+      .modules-grid{grid-template-columns:1fr;}
+      .mod-card{padding:20px;}
+    }
   </style>
 </head>
 <body>
@@ -195,6 +207,15 @@
         title:"Panel de Admin",
         desc:"Gestión de usuarios, permisos, módulos y configuración del sistema.",
         visible: isAdmin
+      },
+      {
+        id:"history", href:"/login-history",
+        color:"#38bdf8", bg:"rgba(56,189,248,.12)",
+        tagBg:"rgba(56,189,248,.12)", tagColor:"#38bdf8", tagBorder:"rgba(56,189,248,.2)",
+        icon:"🔐", tag:"Seguridad",
+        title:"Historial de Sesiones",
+        desc:"Consulta quién ha iniciado sesión, intentos fallidos y cierres de sesión.",
+        visible: true
       }
     ];
 

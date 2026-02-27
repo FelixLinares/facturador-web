@@ -298,6 +298,34 @@
       from { transform:translateX(100px); opacity:0; }
       to   { transform:none; opacity:1; }
     }
+
+    @media(max-width:700px){
+      nav{padding:10px 14px;}
+      .nav-tag{display:none;}
+      .nav-user,.nav-right span{display:none;}
+      .main{padding:14px 12px;}
+      .page-header, .header-card{padding:16px 14px;border-radius:12px;}
+      h1, .page-header h1{font-size:19px!important;}
+      .stats-row{grid-template-columns:1fr 1fr!important;}
+      .stat-card{padding:12px 13px;}
+      .stat-val{font-size:20px!important;}
+      .btn{padding:8px 11px;font-size:12px;}
+      .tasks-grid{grid-template-columns:1fr!important;}
+      .table-wrap{overflow-x:auto;}
+      .table-wrap table{min-width:500px;}
+      .modal-box{margin:8px;padding:18px 14px;border-radius:12px;}
+      .mrow2{grid-template-columns:1fr!important;}
+      .filters{gap:5px;}
+      .filter-btn{padding:6px 10px;font-size:11px;}
+      .toolbar{flex-direction:column;align-items:stretch;}
+      .btn-new-task{width:100%;justify-content:center;}
+      table thead th{font-size:8px;padding:9px 8px;}
+      table td{padding:9px 8px;font-size:12px;}
+    }
+    @media(max-width:400px){
+      .stat-val{font-size:17px!important;}
+      nav .nav-title{font-size:13px;}
+    }
   </style>
 </head>
 <body>
