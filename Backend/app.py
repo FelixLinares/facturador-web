@@ -172,6 +172,18 @@ def init_db():
                 created_at  TEXT
             )
         """)
+        db_execute("""
+            CREATE TABLE IF NOT EXISTS login_logs (
+                id         TEXT PRIMARY KEY,
+                user_id    TEXT NOT NULL,
+                username   TEXT NOT NULL,
+                name       TEXT NOT NULL,
+                ip         TEXT DEFAULT '',
+                device     TEXT DEFAULT '',
+                status     TEXT DEFAULT 'exitoso',
+                created_at TEXT
+            )
+        """)
     else:
         # SQLite
         db_execute("""
@@ -208,6 +220,14 @@ def init_db():
                 due_date TEXT DEFAULT '', priority TEXT DEFAULT 'normal',
                 category TEXT DEFAULT 'general', status TEXT DEFAULT 'pendiente',
                 reminder TEXT DEFAULT '', created_at TEXT
+            )
+        """)
+        db_execute("""
+            CREATE TABLE IF NOT EXISTS login_logs (
+                id TEXT PRIMARY KEY, user_id TEXT NOT NULL,
+                username TEXT NOT NULL, name TEXT NOT NULL,
+                ip TEXT DEFAULT '', device TEXT DEFAULT '',
+                status TEXT DEFAULT 'exitoso', created_at TEXT
             )
         """)
 
@@ -305,20 +325,44 @@ def user_modules(user):
 #  API AUTH
 # ══════════════════════════════════════════════════════════════════════════════
 
+def log_login(user_id, username, name, status):
+    ip     = request.headers.get("X-Forwarded-For", request.remote_addr or "")
+    if "," in ip: ip = ip.split(",")[0].strip()
+    ua     = request.headers.get("User-Agent","")
+    if "Mobile" in ua or "Android" in ua or "iPhone" in ua:
+        device = "📱 Móvil"
+    elif "Tablet" in ua or "iPad" in ua:
+        device = "📟 Tablet"
+    else:
+        device = "💻 Escritorio"
+    db_execute(
+        "INSERT INTO login_logs (id,user_id,username,name,ip,device,status,created_at) VALUES (%s,%s,%s,%s,%s,%s,%s,%s)",
+        (str(uuid.uuid4()), user_id, username, name, ip, device, status, datetime.now().isoformat())
+    )
+
 @app.route("/api/auth/login", methods=["POST"])
 def login():
     data = request.get_json(force=True) or {}
+    username = data.get("username","").strip()
+    # Check user exists first (for failed login logging)
     user = row_to_dict(db_execute(
         "SELECT * FROM users WHERE username=%s AND password=%s",
-        (data.get("username","").strip(), hash_password(data.get("password",""))),
+        (username, hash_password(data.get("password",""))),
         fetch="one"
     ))
-    if not user: return jsonify(error="Usuario o contraseña incorrectos"), 401
+    if not user:
+        # Try to find user by username to log the attempt
+        u2 = row_to_dict(db_execute("SELECT * FROM users WHERE username=%s",(username,),fetch="one"))
+        if u2: log_login(u2["id"], u2["username"], u2["name"], "fallido")
+        return jsonify(error="Usuario o contraseña incorrectos"), 401
     active = user.get("active")
     if isinstance(active, int): active = bool(active)
-    if not active: return jsonify(error="Usuario bloqueado"), 403
+    if not active:
+        log_login(user["id"], user["username"], user["name"], "bloqueado")
+        return jsonify(error="Usuario bloqueado"), 403
     token = create_session(user["id"])
     mods  = user_modules(user)
+    log_login(user["id"], user["username"], user["name"], "exitoso")
     return jsonify(token=token, user={
         "id":user["id"],"name":user["name"],"username":user["username"],
         "role":user["role"],"modules":mods
@@ -327,6 +371,9 @@ def login():
 @app.route("/api/auth/logout", methods=["POST"])
 def logout():
     token = request.headers.get("Authorization","").replace("Bearer ","")
+    user  = get_session_user(token)
+    if user:
+        log_login(user["id"], user["username"], user["name"], "cierre")
     delete_session(token)
     return jsonify(ok=True)
 
@@ -336,6 +383,26 @@ def me():
     u = g.user
     return jsonify(id=u["id"],name=u["name"],username=u["username"],
                    role=u["role"],modules=user_modules(u))
+
+@app.route("/api/admin/login-logs", methods=["GET"])
+@require_admin
+def admin_login_logs():
+    limit = int(request.args.get("limit", 100))
+    rows = rows_to_list(db_execute(
+        "SELECT * FROM login_logs ORDER BY created_at DESC LIMIT %s",
+        (limit,), fetch="all"
+    ))
+    return jsonify(logs=rows)
+
+@app.route("/api/auth/my-logs", methods=["GET"])
+@require_auth
+def my_login_logs():
+    uid = g.user["id"]
+    rows = rows_to_list(db_execute(
+        "SELECT * FROM login_logs WHERE user_id=%s ORDER BY created_at DESC LIMIT 50",
+        (uid,), fetch="all"
+    ))
+    return jsonify(logs=rows)
 
 # ══════════════════════════════════════════════════════════════════════════════
 #  API ADMIN
@@ -865,6 +932,9 @@ def admin_panel(): return send_from_directory(app.static_folder,"admin.html")
 
 @app.route("/tasks")
 def tasks_page(): return send_from_directory(app.static_folder,"tasks.html")
+
+@app.route("/login-history")
+def login_history_page(): return send_from_directory(app.static_folder,"login-history.html")
 
 if __name__ == "__main__":
     host=os.environ.get("HOST","0.0.0.0")
