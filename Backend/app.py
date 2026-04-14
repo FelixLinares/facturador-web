@@ -1,16 +1,16 @@
 # ══════════════════════════════════════════════════════════════════════════════
-#  Facturador FL v3.0  —  Backend unificado con PostgreSQL
+#  Facturador FL v4.0  —  Sin base de datos · Almacenamiento en JSON
 #
-#  DETECCIÓN AUTOMÁTICA:
-#    - Si existe DATABASE_URL (Render) → usa PostgreSQL
-#    - Si no existe                    → usa SQLite local
+#  ✅ NO requiere PostgreSQL ni SQLite
+#  ✅ Los datos se guardan en archivos JSON dentro de Backend/data/
+#  ✅ Usuario predefinido — configura tus credenciales en PREDEFINED_USER
+#  ✅ Sesiones en memoria (se reinician al reiniciar el servidor)
 #
-#  MÓDULOS:
-#   /api/auth/*       → login, logout, sesión
-#   /api/admin/*      → gestión de usuarios
-#   /api/medical/*    → facturador médico + historial
-#   /api/personal/*   → facturador personal
-#   /api/tasks/*      → tareas y recordatorios por usuario
+#  ARCHIVOS DE DATOS:
+#    Backend/data/medical_history.json
+#    Backend/data/personal_invoices.json
+#    Backend/data/tasks.json
+#    Backend/data/login_logs.json
 # ══════════════════════════════════════════════════════════════════════════════
 
 from pathlib import Path
@@ -28,11 +28,13 @@ from docx.enum.table import WD_TABLE_ALIGNMENT
 from reportlab.lib.pagesizes import letter, A4
 from reportlab.pdfgen import canvas
 
-# ─── Base dirs ────────────────────────────────────────────────────────────────
+# ─── Directorios ──────────────────────────────────────────────────────────────
 BASE_DIR  = Path(__file__).parent
 FRONT_DIR = BASE_DIR.parent / "frontend"
 TEMP_DIR  = BASE_DIR / "temp"
+DATA_DIR  = BASE_DIR / "data"
 TEMP_DIR.mkdir(exist_ok=True)
+DATA_DIR.mkdir(exist_ok=True)
 
 # ─── Flask ────────────────────────────────────────────────────────────────────
 app = Flask(
@@ -44,246 +46,116 @@ app = Flask(
 CORS(app, supports_credentials=True)
 
 # ══════════════════════════════════════════════════════════════════════════════
-#  BASE DE DATOS  —  PostgreSQL en Render / SQLite local
+#  ▶▶  CONFIGURACIÓN DEL USUARIO  ◀◀
+#  Cambia aquí el nombre, usuario y contraseña que quieras usar
 # ══════════════════════════════════════════════════════════════════════════════
 
-DATABASE_URL = os.environ.get("DATABASE_URL", "")
-
-if DATABASE_URL:
-    # ── PostgreSQL (Render) ──────────────────────────────────────────────────
-    import psycopg2
-    import psycopg2.extras
-
-    # Render usa postgres:// pero psycopg2 necesita postgresql://
-    if DATABASE_URL.startswith("postgres://"):
-        DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
-
-    def get_db():
-        conn = psycopg2.connect(DATABASE_URL)
-        conn.autocommit = True
-        return conn
-
-    def db_execute(sql, params=(), fetch="none"):
-        conn = get_db()
-        cur  = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
-        cur.execute(sql, params)
-        if fetch == "one":  result = cur.fetchone()
-        elif fetch == "all": result = cur.fetchall()
-        else: result = None
-        cur.close(); conn.close()
-        return result
-
-    PLACEHOLDER = "%s"
-    print("✅ Usando PostgreSQL (Render)")
-
-else:
-    # ── SQLite (local) ───────────────────────────────────────────────────────
-    import sqlite3
-
-    DB_PATH = BASE_DIR / "data" / "facturador.db"
-    DB_PATH.parent.mkdir(exist_ok=True)
-
-    def get_db():
-        conn = sqlite3.connect(str(DB_PATH))
-        conn.row_factory = sqlite3.Row
-        return conn
-
-    def db_execute(sql, params=(), fetch="none"):
-        # Convierte %s → ? para SQLite
-        sql  = sql.replace("%s", "?")
-        conn = get_db()
-        cur  = conn.cursor()
-        cur.execute(sql, params)
-        if fetch == "one":  result = cur.fetchone()
-        elif fetch == "all": result = cur.fetchall()
-        else: result = None
-        conn.commit(); conn.close()
-        return result
-
-    PLACEHOLDER = "?"
-    print("✅ Usando SQLite (local)")
-
-
-def row_to_dict(row):
-    if row is None: return None
-    if isinstance(row, dict): return dict(row)
-    return dict(row)
-
-def rows_to_list(rows):
-    if not rows: return []
-    return [dict(r) for r in rows]
+PREDEFINED_USER = {
+    "id":       "local-user-001",
+    "username": "admin",
+    "password": "admin123",          # ← cambia esto
+    "name":     "Administrador",     # ← cambia esto
+    "role":     "admin",
+    "active":   True,
+    "modules":  "medical,personal,tasks"
+}
 
 # ══════════════════════════════════════════════════════════════════════════════
-#  INICIALIZAR TABLAS
+#  ALMACENAMIENTO JSON
 # ══════════════════════════════════════════════════════════════════════════════
 
-def init_db():
-    if DATABASE_URL:
-        # PostgreSQL — SERIAL para autoincrement
-        db_execute("""
-            CREATE TABLE IF NOT EXISTS users (
-                id       TEXT PRIMARY KEY,
-                username TEXT UNIQUE NOT NULL,
-                password TEXT NOT NULL,
-                name     TEXT NOT NULL,
-                role     TEXT DEFAULT 'user',
-                active   BOOLEAN DEFAULT TRUE,
-                modules  TEXT DEFAULT 'medical',
-                created  TEXT
-            )
-        """)
-        db_execute("""
-            CREATE TABLE IF NOT EXISTS sessions (
-                token   TEXT PRIMARY KEY,
-                user_id TEXT NOT NULL,
-                expires TEXT NOT NULL
-            )
-        """)
-        db_execute("""
-            CREATE TABLE IF NOT EXISTS medical_history (
-                id             TEXT PRIMARY KEY,
-                owner          TEXT NOT NULL,
-                invoice_number TEXT NOT NULL,
-                created_at     TEXT,
-                patient_count  INTEGER DEFAULT 0,
-                total          BIGINT  DEFAULT 0,
-                patients_json  TEXT
-            )
-        """)
-        db_execute("""
-            CREATE TABLE IF NOT EXISTS personal_invoices (
-                id            TEXT PRIMARY KEY,
-                owner         TEXT NOT NULL,
-                data_json     TEXT,
-                created_at    TEXT
-            )
-        """)
-        db_execute("""
-            CREATE TABLE IF NOT EXISTS tasks (
-                id          TEXT PRIMARY KEY,
-                owner       TEXT NOT NULL,
-                title       TEXT NOT NULL,
-                description TEXT DEFAULT '',
-                due_date    TEXT DEFAULT '',
-                priority    TEXT DEFAULT 'normal',
-                category    TEXT DEFAULT 'general',
-                status      TEXT DEFAULT 'pendiente',
-                reminder    TEXT DEFAULT '',
-                created_at  TEXT
-            )
-        """)
-        db_execute("""
-            CREATE TABLE IF NOT EXISTS login_logs (
-                id         TEXT PRIMARY KEY,
-                user_id    TEXT NOT NULL,
-                username   TEXT NOT NULL,
-                name       TEXT NOT NULL,
-                ip         TEXT DEFAULT '',
-                device     TEXT DEFAULT '',
-                status     TEXT DEFAULT 'exitoso',
-                created_at TEXT
-            )
-        """)
-    else:
-        # SQLite
-        db_execute("""
-            CREATE TABLE IF NOT EXISTS users (
-                id TEXT PRIMARY KEY, username TEXT UNIQUE NOT NULL,
-                password TEXT NOT NULL, name TEXT NOT NULL,
-                role TEXT DEFAULT 'user', active INTEGER DEFAULT 1,
-                modules TEXT DEFAULT 'medical', created TEXT
-            )
-        """)
-        db_execute("""
-            CREATE TABLE IF NOT EXISTS sessions (
-                token TEXT PRIMARY KEY, user_id TEXT NOT NULL, expires TEXT NOT NULL
-            )
-        """)
-        db_execute("""
-            CREATE TABLE IF NOT EXISTS medical_history (
-                id TEXT PRIMARY KEY, owner TEXT NOT NULL,
-                invoice_number TEXT NOT NULL, created_at TEXT,
-                patient_count INTEGER DEFAULT 0, total INTEGER DEFAULT 0,
-                patients_json TEXT
-            )
-        """)
-        db_execute("""
-            CREATE TABLE IF NOT EXISTS personal_invoices (
-                id TEXT PRIMARY KEY, owner TEXT NOT NULL,
-                data_json TEXT, created_at TEXT
-            )
-        """)
-        db_execute("""
-            CREATE TABLE IF NOT EXISTS tasks (
-                id TEXT PRIMARY KEY, owner TEXT NOT NULL,
-                title TEXT NOT NULL, description TEXT DEFAULT '',
-                due_date TEXT DEFAULT '', priority TEXT DEFAULT 'normal',
-                category TEXT DEFAULT 'general', status TEXT DEFAULT 'pendiente',
-                reminder TEXT DEFAULT '', created_at TEXT
-            )
-        """)
-        db_execute("""
-            CREATE TABLE IF NOT EXISTS login_logs (
-                id TEXT PRIMARY KEY, user_id TEXT NOT NULL,
-                username TEXT NOT NULL, name TEXT NOT NULL,
-                ip TEXT DEFAULT '', device TEXT DEFAULT '',
-                status TEXT DEFAULT 'exitoso', created_at TEXT
-            )
-        """)
+def load_json(filename: str) -> list:
+    """Carga una lista desde un archivo JSON. Retorna [] si no existe."""
+    path = DATA_DIR / filename
+    if not path.exists():
+        return []
+    try:
+        return json.loads(path.read_text(encoding="utf-8"))
+    except Exception:
+        return []
 
-    # Admin por defecto
-    admin = row_to_dict(db_execute(
-        "SELECT id FROM users WHERE username = %s", ("admin",), fetch="one"
-    ))
-    if not admin:
-        db_execute(
-            "INSERT INTO users (id,username,password,name,role,active,modules,created) VALUES (%s,%s,%s,%s,%s,%s,%s,%s)",
-            (str(uuid.uuid4()), "admin", hash_password("admin123"),
-             "Administrador", "admin", True, "medical,personal,tasks",
-             datetime.now().isoformat())
-        )
-        print("✅ Usuario admin creado (admin/admin123)")
+def save_json(filename: str, data: list) -> None:
+    """Guarda una lista en un archivo JSON."""
+    path = DATA_DIR / filename
+    path.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+
+def append_record(filename: str, record: dict) -> None:
+    """Agrega un registro al archivo JSON."""
+    records = load_json(filename)
+    records.append(record)
+    save_json(filename, records)
+
+def update_record(filename: str, record_id: str, updates: dict) -> bool:
+    """Actualiza un registro por 'id'. Retorna True si lo encontró."""
+    records = load_json(filename)
+    found = False
+    for r in records:
+        if r.get("id") == record_id:
+            r.update(updates)
+            found = True
+            break
+    if found:
+        save_json(filename, records)
+    return found
+
+def delete_record(filename: str, record_id: str) -> bool:
+    """Elimina un registro por 'id'. Retorna True si lo encontró."""
+    records = load_json(filename)
+    new = [r for r in records if r.get("id") != record_id]
+    if len(new) < len(records):
+        save_json(filename, new)
+        return True
+    return False
+
+def find_record(filename: str, **kwargs) -> dict | None:
+    """Busca el primer registro que coincida con los kwargs dados."""
+    for r in load_json(filename):
+        if all(r.get(k) == v for k, v in kwargs.items()):
+            return r
+    return None
 
 # ══════════════════════════════════════════════════════════════════════════════
-#  AUTH HELPERS
+#  SESIONES EN MEMORIA  (dict token → {user_id, expires})
 # ══════════════════════════════════════════════════════════════════════════════
 
-def hash_password(pwd): return hashlib.sha256(pwd.encode()).hexdigest()
+_sessions: dict[str, dict] = {}
 
-init_db()
+def hash_password(pwd: str) -> str:
+    return hashlib.sha256(pwd.encode()).hexdigest()
 
-def create_session(user_id):
+def create_session(user_id: str) -> str:
     token   = secrets.token_hex(32)
-    expires = (datetime.now() + timedelta(hours=8)).isoformat()
-    db_execute("INSERT INTO sessions (token,user_id,expires) VALUES (%s,%s,%s)",
-               (token, user_id, expires))
+    expires = datetime.now() + timedelta(hours=8)
+    _sessions[token] = {"user_id": user_id, "expires": expires}
     return token
 
-def get_session_user(token):
-    if not token: return None
-    sess = row_to_dict(db_execute(
-        "SELECT * FROM sessions WHERE token=%s", (token,), fetch="one"
-    ))
-    if not sess: return None
-    if datetime.fromisoformat(sess["expires"]) < datetime.now():
-        db_execute("DELETE FROM sessions WHERE token=%s", (token,))
+def get_session_user(token: str) -> dict | None:
+    if not token:
         return None
-    user = row_to_dict(db_execute(
-        "SELECT * FROM users WHERE id=%s", (sess["user_id"],), fetch="one"
-    ))
-    return user
+    sess = _sessions.get(token)
+    if not sess:
+        return None
+    if sess["expires"] < datetime.now():
+        del _sessions[token]
+        return None
+    # Solo existe un usuario predefinido
+    if sess["user_id"] == PREDEFINED_USER["id"]:
+        return dict(PREDEFINED_USER)
+    return None
 
-def delete_session(token):
-    db_execute("DELETE FROM sessions WHERE token=%s", (token,))
+def delete_session(token: str) -> None:
+    _sessions.pop(token, None)
+
+# ══════════════════════════════════════════════════════════════════════════════
+#  DECORADORES DE AUTENTICACIÓN
+# ══════════════════════════════════════════════════════════════════════════════
 
 def require_auth(f):
     @wraps(f)
     def wrapper(*args, **kwargs):
-        token = request.headers.get("Authorization","").replace("Bearer ","")
+        token = request.headers.get("Authorization", "").replace("Bearer ", "")
         user  = get_session_user(token)
-        active = user.get("active") if user else False
-        if isinstance(active, int): active = bool(active)
-        if not user or not active:
+        if not user or not user.get("active"):
             return jsonify(error="No autorizado"), 401
         g.user = user
         return f(*args, **kwargs)
@@ -292,7 +164,7 @@ def require_auth(f):
 def require_admin(f):
     @wraps(f)
     def wrapper(*args, **kwargs):
-        token = request.headers.get("Authorization","").replace("Bearer ","")
+        token = request.headers.get("Authorization", "").replace("Bearer ", "")
         user  = get_session_user(token)
         if not user or user.get("role") != "admin":
             return jsonify(error="Solo administradores"), 403
@@ -304,13 +176,11 @@ def require_module(module):
     def decorator(f):
         @wraps(f)
         def wrapper(*args, **kwargs):
-            token = request.headers.get("Authorization","").replace("Bearer ","")
+            token = request.headers.get("Authorization", "").replace("Bearer ", "")
             user  = get_session_user(token)
-            active = user.get("active") if user else False
-            if isinstance(active, int): active = bool(active)
-            if not user or not active:
+            if not user or not user.get("active"):
                 return jsonify(error="No autorizado"), 401
-            mods = user.get("modules","").split(",")
+            mods = user.get("modules", "").split(",")
             if module not in mods and user.get("role") != "admin":
                 return jsonify(error="Sin acceso a este módulo"), 403
             g.user = user
@@ -319,58 +189,59 @@ def require_module(module):
     return decorator
 
 def user_modules(user):
-    return user.get("modules","").split(",")
+    return user.get("modules", "").split(",")
 
 # ══════════════════════════════════════════════════════════════════════════════
 #  API AUTH
 # ══════════════════════════════════════════════════════════════════════════════
 
 def log_login(user_id, username, name, status):
-    ip     = request.headers.get("X-Forwarded-For", request.remote_addr or "")
-    if "," in ip: ip = ip.split(",")[0].strip()
-    ua     = request.headers.get("User-Agent","")
+    ip = request.headers.get("X-Forwarded-For", request.remote_addr or "")
+    if "," in ip:
+        ip = ip.split(",")[0].strip()
+    ua = request.headers.get("User-Agent", "")
     if "Mobile" in ua or "Android" in ua or "iPhone" in ua:
         device = "📱 Móvil"
     elif "Tablet" in ua or "iPad" in ua:
         device = "📟 Tablet"
     else:
         device = "💻 Escritorio"
-    db_execute(
-        "INSERT INTO login_logs (id,user_id,username,name,ip,device,status,created_at) VALUES (%s,%s,%s,%s,%s,%s,%s,%s)",
-        (str(uuid.uuid4()), user_id, username, name, ip, device, status, datetime.now().isoformat())
-    )
+    append_record("login_logs.json", {
+        "id":         str(uuid.uuid4()),
+        "user_id":    user_id,
+        "username":   username,
+        "name":       name,
+        "ip":         ip,
+        "device":     device,
+        "status":     status,
+        "created_at": datetime.now().isoformat()
+    })
 
 @app.route("/api/auth/login", methods=["POST"])
 def login():
-    data = request.get_json(force=True) or {}
-    username = data.get("username","").strip()
-    # Check user exists first (for failed login logging)
-    user = row_to_dict(db_execute(
-        "SELECT * FROM users WHERE username=%s AND password=%s",
-        (username, hash_password(data.get("password",""))),
-        fetch="one"
-    ))
-    if not user:
-        # Try to find user by username to log the attempt
-        u2 = row_to_dict(db_execute("SELECT * FROM users WHERE username=%s",(username,),fetch="one"))
-        if u2: log_login(u2["id"], u2["username"], u2["name"], "fallido")
+    data     = request.get_json(force=True) or {}
+    username = data.get("username", "").strip()
+    password = data.get("password", "")
+
+    u = PREDEFINED_USER
+    if username != u["username"] or hash_password(password) != hash_password(u["password"]):
+        log_login(u["id"], u["username"], u["name"], "fallido")
         return jsonify(error="Usuario o contraseña incorrectos"), 401
-    active = user.get("active")
-    if isinstance(active, int): active = bool(active)
-    if not active:
-        log_login(user["id"], user["username"], user["name"], "bloqueado")
-        return jsonify(error="Usuario bloqueado"), 403
-    token = create_session(user["id"])
-    mods  = user_modules(user)
-    log_login(user["id"], user["username"], user["name"], "exitoso")
+
+    token = create_session(u["id"])
+    mods  = user_modules(u)
+    log_login(u["id"], u["username"], u["name"], "exitoso")
     return jsonify(token=token, user={
-        "id":user["id"],"name":user["name"],"username":user["username"],
-        "role":user["role"],"modules":mods
+        "id":      u["id"],
+        "name":    u["name"],
+        "username":u["username"],
+        "role":    u["role"],
+        "modules": mods
     })
 
 @app.route("/api/auth/logout", methods=["POST"])
 def logout():
-    token = request.headers.get("Authorization","").replace("Bearer ","")
+    token = request.headers.get("Authorization", "").replace("Bearer ", "")
     user  = get_session_user(token)
     if user:
         log_login(user["id"], user["username"], user["name"], "cierre")
@@ -381,106 +252,51 @@ def logout():
 @require_auth
 def me():
     u = g.user
-    return jsonify(id=u["id"],name=u["name"],username=u["username"],
-                   role=u["role"],modules=user_modules(u))
+    return jsonify(id=u["id"], name=u["name"], username=u["username"],
+                   role=u["role"], modules=user_modules(u))
 
 @app.route("/api/admin/login-logs", methods=["GET"])
 @require_admin
 def admin_login_logs():
     limit = int(request.args.get("limit", 100))
-    rows = rows_to_list(db_execute(
-        "SELECT * FROM login_logs ORDER BY created_at DESC LIMIT %s",
-        (limit,), fetch="all"
-    ))
-    return jsonify(logs=rows)
+    logs  = load_json("login_logs.json")
+    logs.sort(key=lambda x: x.get("created_at", ""), reverse=True)
+    return jsonify(logs=logs[:limit])
 
 @app.route("/api/auth/my-logs", methods=["GET"])
 @require_auth
 def my_login_logs():
-    uid = g.user["id"]
-    rows = rows_to_list(db_execute(
-        "SELECT * FROM login_logs WHERE user_id=%s ORDER BY created_at DESC LIMIT 50",
-        (uid,), fetch="all"
-    ))
-    return jsonify(logs=rows)
+    uid  = g.user["id"]
+    logs = [r for r in load_json("login_logs.json") if r.get("user_id") == uid]
+    logs.sort(key=lambda x: x.get("created_at", ""), reverse=True)
+    return jsonify(logs=logs[:50])
 
 # ══════════════════════════════════════════════════════════════════════════════
-#  API ADMIN
+#  API ADMIN  (usuarios)  — solo muestra el usuario predefinido, sin edición
 # ══════════════════════════════════════════════════════════════════════════════
 
 @app.route("/api/admin/users", methods=["GET"])
 @require_admin
 def admin_list_users():
-    users = rows_to_list(db_execute(
-        "SELECT id,username,name,role,active,modules,created FROM users ORDER BY created",
-        fetch="all"
-    ))
-    for u in users:
-        u["modules"] = u.get("modules","").split(",")
-        active = u.get("active")
-        u["active"] = bool(active) if isinstance(active,int) else active
-    return jsonify(users=users)
+    u = dict(PREDEFINED_USER)
+    u["modules"] = user_modules(u)
+    u.pop("password", None)
+    return jsonify(users=[u])
 
 @app.route("/api/admin/users", methods=["POST"])
 @require_admin
 def admin_create_user():
-    data = request.get_json(force=True) or {}
-    username = data.get("username","").strip()
-    password = data.get("password","").strip()
-    name     = data.get("name","").strip()
-    role     = data.get("role","user")
-    modules  = ",".join(data.get("modules",["medical"]))
-    if not username or not password or not name:
-        return jsonify(error="Campos requeridos"), 400
-    existing = db_execute("SELECT id FROM users WHERE username=%s",(username,),fetch="one")
-    if existing: return jsonify(error="Usuario ya existe"), 409
-    uid = str(uuid.uuid4())
-    db_execute(
-        "INSERT INTO users (id,username,password,name,role,active,modules,created) VALUES (%s,%s,%s,%s,%s,%s,%s,%s)",
-        (uid, username, hash_password(password), name, role, True, modules, datetime.now().isoformat())
-    )
-    return jsonify(id=uid,username=username,name=name,role=role,active=True,
-                   modules=modules.split(","),created=datetime.now().isoformat()), 201
+    return jsonify(error="Modo sin base de datos: solo existe el usuario predefinido"), 400
 
-@app.route("/api/admin/users/<uid>", methods=["PUT"])
+@app.route("/api/admin/users/<uid>", methods=["PUT", "DELETE"])
 @require_admin
-def admin_update_user(uid):
-    data = request.get_json(force=True) or {}
-    user = row_to_dict(db_execute("SELECT * FROM users WHERE id=%s",(uid,),fetch="one"))
-    if not user: return jsonify(error="No encontrado"), 404
-    name    = data.get("name", user["name"])
-    role    = data.get("role", user["role"])
-    active  = data.get("active", user["active"])
-    modules = ",".join(data.get("modules", user.get("modules","").split(",")))
-    if isinstance(active, int): active = bool(active)
-    if "password" in data and data["password"].strip():
-        db_execute("UPDATE users SET name=%s,role=%s,active=%s,modules=%s,password=%s WHERE id=%s",
-                   (name,role,active,modules,hash_password(data["password"].strip()),uid))
-    else:
-        db_execute("UPDATE users SET name=%s,role=%s,active=%s,modules=%s WHERE id=%s",
-                   (name,role,active,modules,uid))
-    return jsonify(id=uid,name=name,role=role,active=active,modules=modules.split(","))
-
-@app.route("/api/admin/users/<uid>", methods=["DELETE"])
-@require_admin
-def admin_delete_user(uid):
-    user = row_to_dict(db_execute("SELECT * FROM users WHERE id=%s",(uid,),fetch="one"))
-    if not user: return jsonify(error="No encontrado"), 404
-    if user.get("username") == "admin": return jsonify(error="No puedes eliminar el admin principal"), 400
-    db_execute("DELETE FROM users WHERE id=%s",(uid,))
-    return "", 204
+def admin_modify_user(uid):
+    return jsonify(error="Modo sin base de datos: edita PREDEFINED_USER en app.py"), 400
 
 @app.route("/api/admin/users/<uid>/toggle", methods=["POST"])
 @require_admin
 def admin_toggle_user(uid):
-    user = row_to_dict(db_execute("SELECT * FROM users WHERE id=%s",(uid,),fetch="one"))
-    if not user: return jsonify(error="No encontrado"), 404
-    if user.get("username") == "admin": return jsonify(error="No puedes bloquear al admin"), 400
-    active = user.get("active")
-    if isinstance(active, int): active = bool(active)
-    new_active = not active
-    db_execute("UPDATE users SET active=%s WHERE id=%s",(new_active,uid))
-    return jsonify(active=new_active)
+    return jsonify(error="Modo sin base de datos: solo un usuario"), 400
 
 # ══════════════════════════════════════════════════════════════════════════════
 #  CONSTANTES MÉDICAS
@@ -490,12 +306,12 @@ DOCTOR  = "DR. FRANCISCO ENRIQUE CABRERA PORTIELES"
 SPEC    = "NEUROFISIOLOGO CLINICO"
 LICENSE = "RM0307 - CC 1047488543"
 
-patients_store = {}  # RAM: { user_id: [patients] }
+patients_store: dict[str, list] = {}   # RAM: { user_id: [patients] }
 
-def get_patients(uid): return patients_store.setdefault(uid, [])
-def auto_price(idx): return 100_000 if idx < 20 else 70_000
-def clean(name): return Path(name).stem.replace("_"," ").title()
-def fmt_money(v): return f"${int(v):,}".replace(",",".")
+def get_patients(uid):  return patients_store.setdefault(uid, [])
+def auto_price(idx):    return 100_000 if idx < 20 else 70_000
+def clean(name):        return Path(name).stem.replace("_", " ").title()
+def fmt_money(v):       return f"${int(v):,}".replace(",", ".")
 
 # ══════════════════════════════════════════════════════════════════════════════
 #  GENERADORES DE DOCUMENTOS MÉDICOS
@@ -556,92 +372,111 @@ def generate_pdf(number, patients):
 #  API MÉDICA
 # ══════════════════════════════════════════════════════════════════════════════
 
-@app.route("/api/medical/patients", methods=["GET","POST"])
+@app.route("/api/medical/patients", methods=["GET", "POST"])
 @require_module("medical")
 def medical_patients():
-    uid=g.user["id"]; pts=get_patients(uid)
-    if request.method=="POST" and "files" in request.files:
-        new=[]
+    uid = g.user["id"]
+    pts = get_patients(uid)
+    if request.method == "POST" and "files" in request.files:
+        new = []
         for f in request.files.getlist("files"):
-            if f.filename.lower().endswith((".doc",".docx",".pdf")):
-                idx=len(pts)+len(new)
-                new.append({"id":idx+1,"name":clean(f.filename),"price":auto_price(idx)})
-        pts.extend(new); return jsonify(success=True,patients=new)
-    if request.method=="POST":
-        data=request.get_json(force=True) or {}
-        name=data.get("name","").strip()
-        if not name: return jsonify(error="Nombre requerido"),400
-        idx=len(pts); price=int(data.get("price") or auto_price(idx))
-        if idx<20: price=100_000
-        p={"id":idx+1,"name":name,"price":price}; pts.append(p)
-        return jsonify(p),201
-    sub=sum(p["price"] for p in pts)
-    return jsonify(patients=pts,count=len(pts),subtotal=sub)
+            if f.filename.lower().endswith((".doc", ".docx", ".pdf")):
+                idx = len(pts) + len(new)
+                new.append({"id": idx+1, "name": clean(f.filename), "price": auto_price(idx)})
+        pts.extend(new)
+        return jsonify(success=True, patients=new)
+    if request.method == "POST":
+        data  = request.get_json(force=True) or {}
+        name  = data.get("name", "").strip()
+        if not name:
+            return jsonify(error="Nombre requerido"), 400
+        idx   = len(pts)
+        price = int(data.get("price") or auto_price(idx))
+        if idx < 20:
+            price = 100_000
+        p = {"id": idx+1, "name": name, "price": price}
+        pts.append(p)
+        return jsonify(p), 201
+    sub = sum(p["price"] for p in pts)
+    return jsonify(patients=pts, count=len(pts), subtotal=sub)
 
-@app.route("/api/medical/patients/<int:pid>", methods=["PUT","DELETE"])
+@app.route("/api/medical/patients/<int:pid>", methods=["PUT", "DELETE"])
 @require_module("medical")
 def medical_one(pid):
-    uid=g.user["id"]; pts=get_patients(uid)
-    p=next((x for x in pts if x["id"]==pid),None)
-    if not p: return "",404
-    if request.method=="DELETE":
+    uid = g.user["id"]
+    pts = get_patients(uid)
+    p   = next((x for x in pts if x["id"] == pid), None)
+    if not p:
+        return "", 404
+    if request.method == "DELETE":
         pts.remove(p)
-        for i,obj in enumerate(pts,1): obj["id"]=i
-        return "",204
-    data=request.get_json(force=True) or {}
-    p["name"]=data.get("name",p["name"]).strip()
+        for i, obj in enumerate(pts, 1):
+            obj["id"] = i
+        return "", 204
+    data = request.get_json(force=True) or {}
+    p["name"] = data.get("name", p["name"]).strip()
     if "price" in data:
-        try: p["price"]=int(data["price"])
-        except: return jsonify(error="Precio inválido"),400
-    else: p["price"]=auto_price(p["id"]-1)
+        try:
+            p["price"] = int(data["price"])
+        except Exception:
+            return jsonify(error="Precio inválido"), 400
+    else:
+        p["price"] = auto_price(p["id"] - 1)
     return jsonify(p)
 
 @app.route("/api/medical/clear", methods=["DELETE"])
 @require_module("medical")
 def medical_clear():
-    get_patients(g.user["id"]).clear(); return "",204
+    get_patients(g.user["id"]).clear()
+    return "", 204
 
 @app.route("/api/medical/invoice/<fmt>", methods=["POST"])
 @require_module("medical")
 def medical_invoice(fmt):
-    uid=g.user["id"]; pts=get_patients(uid)
-    if not pts: return jsonify(error="No hay pacientes"),400
-    data=request.get_json(force=True) or {}
-    num=data.get("invoice_number",f"FAC-{datetime.now():%Y%m%d%H%M%S}")
-    # Guardar en historial
-    total=sum(p["price"] for p in pts)
-    db_execute(
-        "INSERT INTO medical_history (id,owner,invoice_number,created_at,patient_count,total,patients_json) VALUES (%s,%s,%s,%s,%s,%s,%s)",
-        (str(uuid.uuid4()), uid, num, datetime.now().isoformat(), len(pts), total, json.dumps(pts))
-    )
-    path=docx_invoice(num,pts) if fmt=="word" else generate_pdf(num,pts)
-    return send_file(path,as_attachment=True)
+    uid = g.user["id"]
+    pts = get_patients(uid)
+    if not pts:
+        return jsonify(error="No hay pacientes"), 400
+    data  = request.get_json(force=True) or {}
+    num   = data.get("invoice_number", f"FAC-{datetime.now():%Y%m%d%H%M%S}")
+    total = sum(p["price"] for p in pts)
+    # ── Guardar en historial JSON ──────────────────────────────────────────
+    append_record("medical_history.json", {
+        "id":             str(uuid.uuid4()),
+        "owner":          uid,
+        "invoice_number": num,
+        "created_at":     datetime.now().isoformat(),
+        "patient_count":  len(pts),
+        "total":          total,
+        "patients_json":  json.dumps(pts)
+    })
+    path = docx_invoice(num, pts) if fmt == "word" else generate_pdf(num, pts)
+    return send_file(path, as_attachment=True)
 
 @app.route("/api/medical/history", methods=["GET"])
 @require_module("medical")
 def medical_history():
-    uid=g.user["id"]
-    rows=rows_to_list(db_execute(
-        "SELECT id,invoice_number,created_at,patient_count,total FROM medical_history WHERE owner=%s ORDER BY created_at DESC LIMIT 50",
-        (uid,),fetch="all"
-    ))
-    return jsonify(history=rows)
+    uid  = g.user["id"]
+    rows = [r for r in load_json("medical_history.json") if r.get("owner") == uid]
+    rows.sort(key=lambda x: x.get("created_at", ""), reverse=True)
+    # Devolver sin patients_json para no inflar la respuesta
+    result = [{k: v for k, v in r.items() if k != "patients_json"} for r in rows[:50]]
+    return jsonify(history=result)
 
 @app.route("/api/medical/history/<hid>/download/<fmt>", methods=["GET"])
 @require_module("medical")
-def medical_history_download(hid,fmt):
-    uid=g.user["id"]
-    row=row_to_dict(db_execute(
-        "SELECT * FROM medical_history WHERE id=%s AND owner=%s",(hid,uid),fetch="one"
-    ))
-    if not row: return jsonify(error="No encontrado"),404
-    pts=json.loads(row["patients_json"])
-    num=row["invoice_number"]
-    path=docx_invoice(num,pts) if fmt=="word" else generate_pdf(num,pts)
-    return send_file(path,as_attachment=True)
+def medical_history_download(hid, fmt):
+    uid = g.user["id"]
+    row = find_record("medical_history.json", id=hid, owner=uid)
+    if not row:
+        return jsonify(error="No encontrado"), 404
+    pts = json.loads(row["patients_json"])
+    num = row["invoice_number"]
+    path = docx_invoice(num, pts) if fmt == "word" else generate_pdf(num, pts)
+    return send_file(path, as_attachment=True)
 
 # ══════════════════════════════════════════════════════════════════════════════
-#  API PERSONAL — generadores PDF/DOCX
+#  GENERADORES PDF/DOCX PERSONALES
 # ══════════════════════════════════════════════════════════════════════════════
 
 def generate_personal_pdf(inv):
@@ -735,73 +570,89 @@ def generate_personal_docx(inv):
     if inv.get("notes"): doc.add_paragraph(); doc.add_paragraph(f"Notas: {inv['notes']}")
     fn=TEMP_DIR/f"FacturaPersonal_{num}.docx"; doc.save(fn); return fn
 
-# ── Endpoints personales ───────────────────────────────────────────────────────
+# ══════════════════════════════════════════════════════════════════════════════
+#  API PERSONAL
+# ══════════════════════════════════════════════════════════════════════════════
 
 @app.route("/api/personal/invoices", methods=["GET"])
 @require_module("personal")
 def personal_list():
-    uid=g.user["id"]
-    rows=rows_to_list(db_execute(
-        "SELECT id,data_json,created_at FROM personal_invoices WHERE owner=%s ORDER BY created_at DESC",
-        (uid,),fetch="all"
-    ))
-    invs=[json.loads(r["data_json"]) for r in rows]
+    uid  = g.user["id"]
+    rows = [r for r in load_json("personal_invoices.json") if r.get("owner") == uid]
+    rows.sort(key=lambda x: x.get("created_at", ""), reverse=True)
+    invs = [json.loads(r["data_json"]) for r in rows]
     return jsonify(invoices=invs)
 
 @app.route("/api/personal/invoices", methods=["POST"])
 @require_module("personal")
 def personal_create():
-    data=request.get_json(force=True) or {}; uid=g.user["id"]
-    inv={
-        "id":str(uuid.uuid4()),"owner":uid,
-        "number":data.get("number",f"INV-{datetime.now():%Y%m%d%H%M%S}"),
-        "date":data.get("date",datetime.now().strftime("%d/%m/%Y")),
-        "due_date":data.get("due_date",""),"status":data.get("status","pendiente"),
-        "issuer_name":data.get("issuer_name",""),"issuer_email":data.get("issuer_email",""),
-        "issuer_phone":data.get("issuer_phone",""),"issuer_address":data.get("issuer_address",""),
-        "client_name":data.get("client_name",""),"client_company":data.get("client_company",""),
-        "client_nit":data.get("client_nit",""),"client_email":data.get("client_email",""),
-        "items":data.get("items",[]),"tax":data.get("tax",0),"notes":data.get("notes",""),
-        "created":datetime.now().isoformat()
+    data = request.get_json(force=True) or {}
+    uid  = g.user["id"]
+    inv  = {
+        "id":             str(uuid.uuid4()),
+        "owner":          uid,
+        "number":         data.get("number", f"INV-{datetime.now():%Y%m%d%H%M%S}"),
+        "date":           data.get("date", datetime.now().strftime("%d/%m/%Y")),
+        "due_date":       data.get("due_date", ""),
+        "status":         data.get("status", "pendiente"),
+        "issuer_name":    data.get("issuer_name", ""),
+        "issuer_email":   data.get("issuer_email", ""),
+        "issuer_phone":   data.get("issuer_phone", ""),
+        "issuer_address": data.get("issuer_address", ""),
+        "client_name":    data.get("client_name", ""),
+        "client_company": data.get("client_company", ""),
+        "client_nit":     data.get("client_nit", ""),
+        "client_email":   data.get("client_email", ""),
+        "items":          data.get("items", []),
+        "tax":            data.get("tax", 0),
+        "notes":          data.get("notes", ""),
+        "created":        datetime.now().isoformat()
     }
-    db_execute(
-        "INSERT INTO personal_invoices (id,owner,data_json,created_at) VALUES (%s,%s,%s,%s)",
-        (inv["id"],uid,json.dumps(inv),datetime.now().isoformat())
-    )
-    return jsonify(inv),201
+    append_record("personal_invoices.json", {
+        "id":         inv["id"],
+        "owner":      uid,
+        "data_json":  json.dumps(inv),
+        "created_at": inv["created"]
+    })
+    return jsonify(inv), 201
 
 @app.route("/api/personal/invoices/<iid>", methods=["PUT"])
 @require_module("personal")
 def personal_update(iid):
-    uid=g.user["id"]
-    row=row_to_dict(db_execute("SELECT * FROM personal_invoices WHERE id=%s AND owner=%s",(iid,uid),fetch="one"))
-    if not row: return jsonify(error="No encontrado"),404
-    inv=json.loads(row["data_json"])
-    data=request.get_json(force=True) or {}
-    for f in ["number","date","due_date","status","issuer_name","issuer_email","issuer_phone",
-              "issuer_address","client_name","client_company","client_nit","client_email","items","tax","notes"]:
-        if f in data: inv[f]=data[f]
-    db_execute("UPDATE personal_invoices SET data_json=%s WHERE id=%s",(json.dumps(inv),iid))
+    uid = g.user["id"]
+    row = find_record("personal_invoices.json", id=iid, owner=uid)
+    if not row:
+        return jsonify(error="No encontrado"), 404
+    inv  = json.loads(row["data_json"])
+    data = request.get_json(force=True) or {}
+    for f in ["number","date","due_date","status","issuer_name","issuer_email",
+              "issuer_phone","issuer_address","client_name","client_company",
+              "client_nit","client_email","items","tax","notes"]:
+        if f in data:
+            inv[f] = data[f]
+    update_record("personal_invoices.json", iid, {"data_json": json.dumps(inv)})
     return jsonify(inv)
 
 @app.route("/api/personal/invoices/<iid>", methods=["DELETE"])
 @require_module("personal")
 def personal_delete(iid):
-    uid=g.user["id"]
-    row=row_to_dict(db_execute("SELECT id FROM personal_invoices WHERE id=%s AND owner=%s",(iid,uid),fetch="one"))
-    if not row: return jsonify(error="No encontrado"),404
-    db_execute("DELETE FROM personal_invoices WHERE id=%s",(iid,))
-    return "",204
+    uid = g.user["id"]
+    row = find_record("personal_invoices.json", id=iid, owner=uid)
+    if not row:
+        return jsonify(error="No encontrado"), 404
+    delete_record("personal_invoices.json", iid)
+    return "", 204
 
 @app.route("/api/personal/invoices/<iid>/download/<fmt>", methods=["GET"])
 @require_module("personal")
-def personal_download(iid,fmt):
-    uid=g.user["id"]
-    row=row_to_dict(db_execute("SELECT * FROM personal_invoices WHERE id=%s AND owner=%s",(iid,uid),fetch="one"))
-    if not row: return jsonify(error="No encontrado"),404
-    inv=json.loads(row["data_json"])
-    path=generate_personal_docx(inv) if fmt=="word" else generate_personal_pdf(inv)
-    return send_file(path,as_attachment=True)
+def personal_download(iid, fmt):
+    uid = g.user["id"]
+    row = find_record("personal_invoices.json", id=iid, owner=uid)
+    if not row:
+        return jsonify(error="No encontrado"), 404
+    inv  = json.loads(row["data_json"])
+    path = generate_personal_docx(inv) if fmt == "word" else generate_personal_pdf(inv)
+    return send_file(path, as_attachment=True)
 
 # ══════════════════════════════════════════════════════════════════════════════
 #  API TAREAS
@@ -810,105 +661,104 @@ def personal_download(iid,fmt):
 @app.route("/api/tasks", methods=["GET"])
 @require_module("tasks")
 def tasks_list():
-    uid=g.user["id"]
-    status_filter=request.args.get("status","")
+    uid           = g.user["id"]
+    status_filter = request.args.get("status", "")
+    rows = [r for r in load_json("tasks.json") if r.get("owner") == uid]
     if status_filter:
-        rows=rows_to_list(db_execute(
-            "SELECT * FROM tasks WHERE owner=%s AND status=%s ORDER BY due_date,created_at DESC",
-            (uid,status_filter),fetch="all"
-        ))
-    else:
-        rows=rows_to_list(db_execute(
-            "SELECT * FROM tasks WHERE owner=%s ORDER BY due_date,created_at DESC",
-            (uid,),fetch="all"
-        ))
+        rows = [r for r in rows if r.get("status") == status_filter]
+    rows.sort(key=lambda x: (x.get("due_date",""), x.get("created_at","")), reverse=True)
     return jsonify(tasks=rows)
 
 @app.route("/api/tasks", methods=["POST"])
 @require_module("tasks")
 def tasks_create():
-    data=request.get_json(force=True) or {}; uid=g.user["id"]
-    title=data.get("title","").strip()
-    if not title: return jsonify(error="Título requerido"),400
-    tid=str(uuid.uuid4())
-    db_execute(
-        "INSERT INTO tasks (id,owner,title,description,due_date,priority,category,status,reminder,created_at) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)",
-        (tid,uid,title,
-         data.get("description",""),
-         data.get("due_date",""),
-         data.get("priority","normal"),
-         data.get("category","general"),
-         data.get("status","pendiente"),
-         data.get("reminder",""),
-         datetime.now().isoformat())
-    )
-    task=row_to_dict(db_execute("SELECT * FROM tasks WHERE id=%s",(tid,),fetch="one"))
-    return jsonify(task),201
+    data  = request.get_json(force=True) or {}
+    uid   = g.user["id"]
+    title = data.get("title", "").strip()
+    if not title:
+        return jsonify(error="Título requerido"), 400
+    tid  = str(uuid.uuid4())
+    task = {
+        "id":          tid,
+        "owner":       uid,
+        "title":       title,
+        "description": data.get("description", ""),
+        "due_date":    data.get("due_date", ""),
+        "priority":    data.get("priority", "normal"),
+        "category":    data.get("category", "general"),
+        "status":      data.get("status", "pendiente"),
+        "reminder":    data.get("reminder", ""),
+        "created_at":  datetime.now().isoformat()
+    }
+    append_record("tasks.json", task)
+    return jsonify(task), 201
 
 @app.route("/api/tasks/<tid>", methods=["PUT"])
 @require_module("tasks")
 def tasks_update(tid):
-    uid=g.user["id"]
-    task=row_to_dict(db_execute("SELECT * FROM tasks WHERE id=%s AND owner=%s",(tid,uid),fetch="one"))
-    if not task: return jsonify(error="No encontrado"),404
-    data=request.get_json(force=True) or {}
-    title      =data.get("title",      task["title"])
-    description=data.get("description",task["description"])
-    due_date   =data.get("due_date",   task["due_date"])
-    priority   =data.get("priority",   task["priority"])
-    category   =data.get("category",   task["category"])
-    status     =data.get("status",     task["status"])
-    reminder   =data.get("reminder",   task["reminder"])
-    db_execute(
-        "UPDATE tasks SET title=%s,description=%s,due_date=%s,priority=%s,category=%s,status=%s,reminder=%s WHERE id=%s",
-        (title,description,due_date,priority,category,status,reminder,tid)
-    )
-    task=row_to_dict(db_execute("SELECT * FROM tasks WHERE id=%s",(tid,),fetch="one"))
+    uid  = g.user["id"]
+    task = find_record("tasks.json", id=tid, owner=uid)
+    if not task:
+        return jsonify(error="No encontrado"), 404
+    data = request.get_json(force=True) or {}
+    updates = {
+        "title":       data.get("title",       task["title"]),
+        "description": data.get("description", task["description"]),
+        "due_date":    data.get("due_date",    task["due_date"]),
+        "priority":    data.get("priority",    task["priority"]),
+        "category":    data.get("category",    task["category"]),
+        "status":      data.get("status",      task["status"]),
+        "reminder":    data.get("reminder",    task["reminder"]),
+    }
+    update_record("tasks.json", tid, updates)
+    task.update(updates)
     return jsonify(task)
 
 @app.route("/api/tasks/<tid>", methods=["DELETE"])
 @require_module("tasks")
 def tasks_delete(tid):
-    uid=g.user["id"]
-    task=row_to_dict(db_execute("SELECT id FROM tasks WHERE id=%s AND owner=%s",(tid,uid),fetch="one"))
-    if not task: return jsonify(error="No encontrado"),404
-    db_execute("DELETE FROM tasks WHERE id=%s",(tid,))
-    return "",204
+    uid  = g.user["id"]
+    task = find_record("tasks.json", id=tid, owner=uid)
+    if not task:
+        return jsonify(error="No encontrado"), 404
+    delete_record("tasks.json", tid)
+    return "", 204
 
 @app.route("/api/tasks/<tid>/complete", methods=["POST"])
 @require_module("tasks")
 def tasks_complete(tid):
-    uid=g.user["id"]
-    task=row_to_dict(db_execute("SELECT * FROM tasks WHERE id=%s AND owner=%s",(tid,uid),fetch="one"))
-    if not task: return jsonify(error="No encontrado"),404
-    new_status="completada" if task["status"]!="completada" else "pendiente"
-    db_execute("UPDATE tasks SET status=%s WHERE id=%s",(new_status,tid))
+    uid  = g.user["id"]
+    task = find_record("tasks.json", id=tid, owner=uid)
+    if not task:
+        return jsonify(error="No encontrado"), 404
+    new_status = "completada" if task["status"] != "completada" else "pendiente"
+    update_record("tasks.json", tid, {"status": new_status})
     return jsonify(status=new_status)
 
 @app.route("/api/tasks/reminders", methods=["GET"])
 @require_module("tasks")
 def tasks_reminders():
-    """Tareas con recordatorio en las próximas 24h o vencidas"""
-    uid=g.user["id"]
-    now=datetime.now()
-    tomorrow=(now+timedelta(hours=24)).strftime("%Y-%m-%d")
-    today=now.strftime("%Y-%m-%d")
-    rows=rows_to_list(db_execute(
-        "SELECT * FROM tasks WHERE owner=%s AND status!='completada' AND due_date!='' AND due_date<=%s ORDER BY due_date",
-        (uid,tomorrow),fetch="all"
-    ))
-    reminders=[]
+    uid      = g.user["id"]
+    now      = datetime.now()
+    tomorrow = (now + timedelta(hours=24)).strftime("%Y-%m-%d")
+    rows     = [r for r in load_json("tasks.json")
+                if r.get("owner") == uid
+                and r.get("status") != "completada"
+                and r.get("due_date", "") != ""
+                and r.get("due_date", "") <= tomorrow]
+    rows.sort(key=lambda x: x.get("due_date", ""))
+    reminders = []
     for t in rows:
-        due=t.get("due_date","")
+        due = t.get("due_date", "")
         if due:
             try:
-                due_dt=datetime.strptime(due,"%Y-%m-%d")
-                overdue=due_dt.date()<now.date()
-                due_today=due_dt.date()==now.date()
-                due_tomorrow=due_dt.date()==(now+timedelta(days=1)).date()
-                t["alert_type"]="vencida" if overdue else ("hoy" if due_today else "mañana")
+                due_dt  = datetime.strptime(due, "%Y-%m-%d")
+                overdue = due_dt.date() < now.date()
+                due_today    = due_dt.date() == now.date()
+                t["alert_type"] = "vencida" if overdue else ("hoy" if due_today else "mañana")
                 reminders.append(t)
-            except: pass
+            except Exception:
+                pass
     return jsonify(reminders=reminders)
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -916,27 +766,29 @@ def tasks_reminders():
 # ══════════════════════════════════════════════════════════════════════════════
 
 @app.route("/")
-def home(): return send_from_directory(app.static_folder,"login.html")
+def home():           return send_from_directory(app.static_folder, "login.html")
 
 @app.route("/dashboard")
-def dashboard(): return send_from_directory(app.static_folder,"dashboard.html")
+def dashboard():      return send_from_directory(app.static_folder, "dashboard.html")
 
 @app.route("/medical")
-def medical(): return send_from_directory(app.static_folder,"index.html")
+def medical():        return send_from_directory(app.static_folder, "index.html")
 
 @app.route("/personal")
-def personal(): return send_from_directory(app.static_folder,"personal.html")
+def personal():       return send_from_directory(app.static_folder, "personal.html")
 
 @app.route("/admin")
-def admin_panel(): return send_from_directory(app.static_folder,"admin.html")
+def admin_panel():    return send_from_directory(app.static_folder, "admin.html")
 
 @app.route("/tasks")
-def tasks_page(): return send_from_directory(app.static_folder,"tasks.html")
+def tasks_page():     return send_from_directory(app.static_folder, "tasks.html")
 
 @app.route("/login-history")
-def login_history_page(): return send_from_directory(app.static_folder,"login-history.html")
+def login_history_page(): return send_from_directory(app.static_folder, "login-history.html")
 
 if __name__ == "__main__":
-    host=os.environ.get("HOST","0.0.0.0")
-    port=int(os.environ.get("PORT",5000))
-    app.run(host=host,port=port,debug=True)
+    host = os.environ.get("HOST", "0.0.0.0")
+    port = int(os.environ.get("PORT", 5000))
+    print("✅ Modo sin base de datos — almacenamiento en JSON")
+    print(f"✅ Usuario predefinido: {PREDEFINED_USER['username']} / {PREDEFINED_USER['password']}")
+    app.run(host=host, port=port, debug=True)
