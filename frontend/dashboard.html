@@ -3,51 +3,54 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="color-scheme" content="light dark">
 <title>Panel · Facturador FL</title>
 <link rel="stylesheet" href="/ui.css">
 <style>
-  .bar{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 24px;
-    background:var(--surface);border-bottom:1px solid var(--border)}
-  .brand{display:flex;align-items:center;gap:10px;font-weight:600}
-  .brand .mark{width:28px;height:28px;border-radius:7px;background:var(--accent);color:#fff;display:grid;place-items:center}
-  .brand .icon{width:16px;height:16px}
-  .who{display:flex;align-items:center;gap:12px;font-size:14px}
-  .role{font-size:11px;font-weight:600;letter-spacing:.04em;padding:2px 8px;border-radius:999px;
-    background:var(--accent-soft);color:var(--accent)}
-  .wrap{max-width:960px;margin:0 auto;padding:40px 24px 24px}
-  .date{color:var(--muted);font-size:13px;text-transform:capitalize;margin-bottom:4px}
-  h1{font-size:26px;margin-bottom:4px}
-  .lead{margin:0 0 28px;color:var(--muted)}
-  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:16px}
-  .card{display:block;padding:20px;background:var(--surface);border:1px solid var(--border);
-    border-radius:10px;color:inherit;text-decoration:none;transition:border-color .2s var(--ease),transform .2s var(--ease)}
-  .card:hover{border-color:var(--accent);transform:translateY(-2px)}
-  .card .ico{width:36px;height:36px;border-radius:8px;background:var(--accent-soft);color:var(--accent);
-    display:grid;place-items:center;margin-bottom:14px}
-  .card h2{font-size:16px;margin-bottom:6px}
-  .card p{margin:0;color:var(--muted);font-size:14px}
-  footer{max-width:960px;margin:0 auto;padding:24px;display:flex;flex-wrap:wrap;gap:12px;
-    justify-content:space-between;color:var(--muted);font-size:13px}
-  @media (max-width:520px){.who .name{display:none}.bar{padding:12px 16px}.wrap{padding:28px 16px}}
+  .who{display:flex;align-items:center;gap:16px;font-size:14px}
+  .role{color:var(--muted)}
+  .date{margin-bottom:12px;color:var(--muted);font-size:15px}
+  .date::first-letter{text-transform:uppercase}
+  .wrap h1{font-size:clamp(52px,10vw,136px);line-height:.92;max-width:14ch;letter-spacing:-.02em}
+  .wrap .hypno{margin:36px 0 12px;color:var(--ink)}
+  .wrap .hypno svg{height:72px}
+  .wrap .hypno path{stroke-width:2}
+  .index{border-top:1px solid var(--ink)}
+  .row{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);gap:24px;align-items:baseline;
+    padding:24px 0;border-bottom:1px solid var(--ink);color:var(--ink);text-decoration:none;
+    transition:background 150ms ease-out,box-shadow 150ms ease-out}
+  .row h2{font-size:clamp(34px,4.6vw,60px)}
+  .row p{color:var(--muted);max-width:44ch;transition:color 150ms ease-out}
+  .row:hover,.row:focus-visible{background:var(--accent);color:var(--accent-ink);box-shadow:-14px 0 0 var(--accent),14px 0 0 var(--accent)}
+  .row:hover p,.row:focus-visible p{color:var(--accent-ink)}
+  .row:focus-visible{outline-offset:-3px}
+  footer{max-width:1120px;margin:0 auto;padding:24px 32px 40px;display:flex;flex-wrap:wrap;gap:12px;
+    justify-content:space-between;color:var(--muted);font-size:14px}
+  @media (max-width:720px){
+    .row{grid-template-columns:1fr;gap:8px;padding:20px 0}
+    .who .name{display:none}
+    footer{padding:24px 16px 32px}
+  }
 </style>
 </head>
 <body>
 <header class="bar">
-  <div class="brand">
-    <span class="mark"><svg class="icon" viewBox="0 0 24 24"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M9 13h6M9 17h6"/></svg></span>
-    Facturador FL
-  </div>
+  <span class="wordmark">Facturador FL</span>
   <div class="who">
     <span class="name" id="userName"></span>
     <span class="role" id="roleBadge"></span>
-    <button class="btn btn-ghost" id="btnLogout">Salir</button>
+    <button class="btn btn-ghost btn-sm" id="btnLogout">Salir</button>
   </div>
 </header>
 <main class="wrap">
   <div class="date" id="dateStr"></div>
-  <h1>Hola, <span id="welcomeName"></span></h1>
-  <p class="lead">Elige un módulo para continuar.</p>
-  <div class="grid" id="modulesGrid"></div>
+  <h1><span id="greet"></span>, <span id="welcomeName"></span>.</h1>
+  <div class="hypno" aria-hidden="true">
+    <svg viewBox="0 0 1000 200" preserveAspectRatio="none">
+      <path pathLength="1" d="M0 20H40V100H70V140H130V180H230V140H300V60H340V140H420V180H500V140H560V60H640V140H700V100H730V140H790V60H900V20H1000"/>
+    </svg>
+  </div>
+  <nav class="index" id="modulesGrid" aria-label="Módulos"></nav>
 </main>
 <footer>
   <span>© 2026 Felix Linares</span>
@@ -60,31 +63,26 @@
   const modules = user.modules || [];
   const isAdmin = user.role === "admin";
   const name    = user.name || user.username;
+  const hour    = new Date().getHours();
+  document.getElementById("greet").textContent = hour < 12 ? "Buenos días" : hour < 19 ? "Buenas tardes" : "Buenas noches";
   document.getElementById("userName").textContent = name;
   document.getElementById("welcomeName").textContent = name.split(" ")[0];
-  document.getElementById("roleBadge").textContent = isAdmin ? "ADMIN" : "USUARIO";
+  document.getElementById("roleBadge").textContent = isAdmin ? "Administrador" : "Usuario";
   document.getElementById("dateStr").textContent = new Date().toLocaleDateString("es-CO",
     {weekday:"long", day:"numeric", month:"long", year:"numeric"});
 
-  const ICONS = {
-    medical:  '<path d="M12 5v14M5 12h14"/>',
-    personal: '<path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M9 13h6M9 17h6"/>',
-    tasks:    '<path d="M9 11l3 3 8-8"/><path d="M20 12v7a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h9"/>',
-    admin:    '<path d="M4 6h10M18 6h2M4 12h2M10 12h10M4 18h10M18 18h2"/><circle cx="16" cy="6" r="2"/><circle cx="8" cy="12" r="2"/><circle cx="16" cy="18" r="2"/>',
-    history:  '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>'
-  };
   const MODS = [
-    {id:"medical",  href:"/medical",       title:"Facturador médico",    desc:"Pacientes y estudios de polisomnografía, con historial y exportación a PDF o Word.", visible: modules.includes("medical") || isAdmin},
-    {id:"personal", href:"/personal",      title:"Facturador personal",  desc:"Facturas con varias monedas, IVA y estado de pago.",                                visible: modules.includes("personal") || isAdmin},
-    {id:"tasks",    href:"/tasks",         title:"Mis tareas",           desc:"Recordatorios y actividades pendientes con alertas.",                               visible: modules.includes("tasks") || isAdmin},
-    {id:"admin",    href:"/admin",         title:"Administración",       desc:"Usuarios, permisos y módulos del sistema.",                                         visible: isAdmin},
-    {id:"history",  href:"/login-history", title:"Historial de sesiones",desc:"Inicios de sesión, intentos fallidos y cierres de sesión.",                         visible: true}
+    {href:"/medical",       title:"Facturador médico",     desc:"Pacientes y estudios de polisomnografía, con historial y exportación a PDF o Word.", visible: modules.includes("medical") || isAdmin},
+    {href:"/personal",      title:"Facturador personal",   desc:"Facturas con varias monedas, IVA y estado de pago.",                                visible: modules.includes("personal") || isAdmin},
+    {href:"/tasks",         title:"Mis tareas",            desc:"Recordatorios y actividades pendientes con alertas.",                               visible: modules.includes("tasks") || isAdmin},
+    {href:"/admin",         title:"Administración",        desc:"Usuarios, permisos y módulos del sistema.",                                         visible: isAdmin},
+    {href:"/login-history", title:"Historial de sesiones", desc:"Inicios de sesión, intentos fallidos y cierres de sesión.",                         visible: true}
   ];
   const grid = document.getElementById("modulesGrid");
   MODS.filter(m => m.visible).forEach(m => {
     const a = document.createElement("a");
-    a.href = m.href; a.className = "card";
-    a.innerHTML = `<div class="ico"><svg class="icon" viewBox="0 0 24 24">${ICONS[m.id]}</svg></div><h2></h2><p></p>`;
+    a.href = m.href; a.className = "row";
+    a.innerHTML = "<h2></h2><p></p>";
     a.querySelector("h2").textContent = m.title;
     a.querySelector("p").textContent = m.desc;
     grid.appendChild(a);
