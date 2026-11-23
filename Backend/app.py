@@ -52,8 +52,8 @@ CORS(app, supports_credentials=True)
 
 PREDEFINED_USER = {
     "id":       "local-user-001",
-    "username": "admin",
-    "password": "admin123",          # ← cambia esto
+    "username": os.environ.get("APP_USER", "admin"),
+    "password": os.environ.get("APP_PASSWORD", "admin123"),   # defínelas en Render > Environment
     "name":     "Administrador",     # ← cambia esto
     "role":     "admin",
     "active":   True,
@@ -786,9 +786,11 @@ def tasks_page():     return send_from_directory(app.static_folder, "tasks.html"
 @app.route("/login-history")
 def login_history_page(): return send_from_directory(app.static_folder, "login-history.html")
 
+@app.route("/health")
+def health():         return jsonify(status="ok")
+
 if __name__ == "__main__":
     host = os.environ.get("HOST", "0.0.0.0")
     port = int(os.environ.get("PORT", 5000))
     print("✅ Modo sin base de datos — almacenamiento en JSON")
-    print(f"✅ Usuario predefinido: {PREDEFINED_USER['username']} / {PREDEFINED_USER['password']}")
-    app.run(host=host, port=port, debug=True)
+    app.run(host=host, port=port, debug=False)
