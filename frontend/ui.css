@@ -1,1 +1,33 @@
-
+/* Facturador FL — sistema de diseño base. Un solo acento, tipografía del sistema. */
+:root{
+  --bg:#f6f7f9; --surface:#fff; --border:#e2e5ea; --text:#1b2330; --muted:#5f6b7a;
+  --accent:#1f5f8b; --accent-hover:#184d71; --accent-soft:#e8f0f6; --danger:#b42318; --danger-soft:#fdecea;
+  --radius:8px; --ease:cubic-bezier(.2,.7,.2,1);
+}
+@media (prefers-color-scheme:dark){:root{
+  --bg:#0f1318; --surface:#171c23; --border:#2a313b; --text:#e8ebf0; --muted:#9aa5b4;
+  --accent:#5aa3d1; --accent-hover:#7bb7de; --accent-soft:#1a2733; --danger:#f2837a; --danger-soft:#2c1917;
+}}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--text);min-height:100vh;
+  font:15px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+h1,h2,h3{margin:0;font-weight:600;letter-spacing:-.01em}
+a{color:var(--accent)}
+.icon{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round;flex:none}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;height:40px;padding:0 16px;
+  border:1px solid transparent;border-radius:var(--radius);background:var(--accent);color:#fff;
+  font:inherit;font-weight:500;cursor:pointer;transition:background .2s var(--ease),border-color .2s var(--ease)}
+.btn:hover{background:var(--accent-hover)}
+.btn:disabled{opacity:.6;cursor:default}
+.btn:focus-visible,.field input:focus-visible,.card:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.btn-ghost{background:transparent;color:var(--text);border-color:var(--border)}
+.btn-ghost:hover{background:var(--accent-soft)}
+.field{display:grid;gap:6px;margin-bottom:16px}
+.field label{font-size:13px;font-weight:500;color:var(--muted)}
+.field input{height:40px;padding:0 12px;border:1px solid var(--border);border-radius:var(--radius);
+  background:var(--surface);color:var(--text);font:inherit}
+.alert{display:none;margin-bottom:16px;padding:10px 12px;border-radius:var(--radius);
+  background:var(--danger-soft);color:var(--danger);font-size:14px}
+.alert.show{display:block}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
