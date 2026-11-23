@@ -3,328 +3,83 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Facturador médico · Facturador FL</title>
+<meta name="color-scheme" content="light dark">
+<title>Iniciar sesión · Facturador FL</title>
 <link rel="stylesheet" href="/ui.css">
 <style>
-  .bar{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 24px;background:var(--surface);border-bottom:1px solid var(--border)}
-  .crumbs{display:flex;align-items:center;gap:8px;font-size:14px;color:var(--muted)}
-  .crumbs a{text-decoration:none}.crumbs b{color:var(--text);font-weight:600}
-  .wrap{max-width:1000px;margin:0 auto;padding:32px 24px}
-  h1{font-size:24px;margin-bottom:6px}
-  .sub{margin:0 0 24px;color:var(--muted);font-size:13px}
-  .stats{display:flex;gap:40px;margin-bottom:20px}
-  .stat b{display:block;font-size:26px;font-weight:600;font-variant-numeric:tabular-nums}
-  .stat span{font-size:13px;color:var(--muted)}
-  .actions{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding-bottom:20px;border-bottom:1px solid var(--border);margin-bottom:20px}
-  .menu{position:relative}.menu summary{list-style:none}.menu summary::-webkit-details-marker{display:none}
-  .menu .pop{position:absolute;right:0;top:44px;z-index:5;min-width:180px;padding:6px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius)}
-  .pop button{width:100%;text-align:left;padding:8px 10px;border:0;background:none;color:var(--danger);font:inherit;border-radius:6px;cursor:pointer}
-  .pop button:hover{background:var(--danger-soft)}
-  .prog-wrap{display:none;height:4px;background:var(--border);border-radius:2px;margin-bottom:16px;overflow:hidden}
-  .prog-bar{height:100%;width:0;background:var(--accent);transition:width .2s ease-out}
-  .filters{display:flex;flex-wrap:wrap;gap:8px;justify-content:space-between;margin-bottom:16px}
-  .filters .grp{display:flex;gap:8px;flex-wrap:wrap}
-  input.in{height:40px;padding:0 12px;border:1px solid var(--border);border-radius:var(--radius);background:var(--surface);color:var(--text);font:inherit}
-  input.in:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
-  .tabs{display:flex;gap:4px;border-bottom:1px solid var(--border);margin-bottom:16px}
-  .tab{padding:10px 14px;border:0;border-bottom:2px solid transparent;background:none;color:var(--muted);font:inherit;font-weight:500;cursor:pointer}
-  .tab.active{color:var(--accent);border-bottom-color:var(--accent)}
-  .table-wrap{overflow-x:auto;background:var(--surface);border:1px solid var(--border);border-radius:10px}
-  table{width:100%;border-collapse:collapse;min-width:520px}
-  th{padding:10px 14px;text-align:left;font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;border-bottom:1px solid var(--border)}
-  td{padding:10px 14px;border-bottom:1px solid var(--border)}tr:last-child td{border-bottom:0}
-  .num{text-align:right;font-variant-numeric:tabular-nums}
-  .td-id{color:var(--muted);font-variant-numeric:tabular-nums}
-  .td-empty{text-align:center;color:var(--muted);padding:40px 14px}
-  .btn-sm{height:32px;padding:0 10px;font-size:13px}
-  .btn-danger{background:transparent;color:var(--danger);border-color:var(--border)}
-  .btn-danger:hover{background:var(--danger-soft)}
-  .skel td div{height:14px;border-radius:4px;background:var(--border);animation:pulse 1.2s ease-in-out infinite}
-  @keyframes pulse{50%{opacity:.4}}
-  .overlay{position:fixed;inset:0;z-index:20;display:grid;place-items:center;padding:16px;background:rgba(10,14,20,.5);opacity:0;visibility:hidden;transition:opacity 200ms ease-out,visibility 200ms ease-out}
-  .overlay.show{opacity:1;visibility:visible;transition-duration:250ms}
-  .dialog{width:100%;max-width:440px;padding:24px;background:var(--surface);border:1px solid var(--border);border-radius:12px;transform:scale(.95);transition:transform 200ms ease-out}
-  .overlay.show .dialog{transform:none;transition-duration:250ms}
-  .dialog h3{font-size:18px;margin-bottom:16px}
-  .acts{display:flex;gap:8px;justify-content:flex-end;margin-top:20px}
-  .grupo{padding:12px;border:1px solid var(--border);border-radius:var(--radius);margin-bottom:10px}
-  .grupo .top{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px;font-variant-numeric:tabular-nums}
-  .grupo small{color:var(--muted)}
-  #massPW{display:none;height:4px;background:var(--border);border-radius:2px;overflow:hidden;margin-top:12px}
-  #massPB{height:100%;width:0;background:var(--accent);transition:width .2s ease-out}
-  #massPL{display:none;margin-top:8px;font-size:13px;color:var(--muted)}
-  .toast{position:fixed;right:16px;bottom:16px;z-index:30;padding:10px 14px;background:var(--surface);border:1px solid var(--border);border-left:3px solid var(--accent);border-radius:var(--radius);font-size:14px}
-  .toast.err{border-left-color:var(--danger)}
-  .badge{font-size:12px;font-weight:600;padding:2px 8px;border-radius:999px;background:var(--accent-soft);color:var(--accent)}
-  @media (max-width:640px){.bar{padding:12px 16px}.wrap{padding:24px 16px}.stats{gap:24px}}
+  .split{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(360px,1fr);min-height:100vh}
+  .hero{display:flex;flex-direction:column;justify-content:space-between;gap:48px;padding:40px 56px;
+    background:var(--accent);color:var(--accent-ink)}
+  .hero .wordmark{color:var(--accent-ink)}
+  .hero h1{font-size:clamp(48px,7.4vw,112px);line-height:.95;max-width:11ch}
+  .hero p{margin-top:24px;max-width:34ch;font-size:18px}
+  .hero .hypno{color:var(--accent-ink)}
+  .login{display:grid;align-content:center;padding:40px 56px;max-width:520px;width:100%}
+  .login h2{font-size:44px;margin-bottom:8px}
+  .lead{margin-bottom:32px;color:var(--muted)}
+  .login .btn{width:100%}
+  @media (max-width:860px){
+    .split{grid-template-columns:1fr}
+    .hero{gap:32px;padding:28px 24px 32px}
+    .hero h1{font-size:clamp(44px,13vw,72px)}
+    .login{padding:36px 24px 48px;max-width:none}
+  }
 </style>
 </head>
 <body>
-<header class="bar">
-  <nav class="crumbs"><a href="/dashboard">‹ Panel</a><span>/</span><b>Facturador médico</b></nav>
-  <span class="crumbs" id="navUser"></span>
-</header>
-<main class="wrap">
-  <h1>Facturación de pacientes</h1>
-  <p class="sub">Neurofisiología Clínica · DR. FRANCISCO ENRIQUE CABRERA PORTIELES · RM0307 - CC 1047488543</p>
-  <div class="stats">
-    <div class="stat"><b id="totalTxt">0</b><span>Pacientes</span></div>
-    <div class="stat"><b id="subtotalTxt">$0</b><span>Subtotal a facturar</span></div>
-  </div>
-  <div class="actions">
-    <button id="addBtn" class="btn">Agregar paciente</button>
-    <button id="uploadBtn" class="btn btn-ghost">Cargar archivos</button>
-    <button id="editPricesBtn" class="btn btn-ghost">Editar precios masivo</button>
-    <details class="menu">
-      <summary class="btn btn-ghost" aria-label="Más acciones">⋯</summary>
-      <div class="pop"><button id="clearBtn">Vaciar lista…</button></div>
-    </details>
-    <input id="fileInput" type="file" multiple accept=".doc,.docx,.pdf" hidden>
-  </div>
-  <div id="progWrap" class="prog-wrap"><div id="progBar" class="prog-bar"></div></div>
-  <div class="filters">
-    <input id="searchInput" class="in" placeholder="Buscar paciente por nombre…" aria-label="Buscar paciente">
-    <div class="grp">
-      <input id="invoiceInput" class="in" placeholder="N° factura" aria-label="Número de factura" style="width:150px">
-      <button id="pdfBtn" class="btn btn-ghost">PDF</button>
-      <button id="docxBtn" class="btn btn-ghost">Word</button>
+<div class="split">
+  <section class="hero">
+    <span class="wordmark">Facturador FL</span>
+    <div>
+      <h1>Del estudio de sueño a la factura.</h1>
+      <p>Pacientes, precios e historial de facturas en un solo lugar.</p>
     </div>
-  </div>
-  <div class="tabs">
-    <button class="tab active" data-tab="patients">Pacientes</button>
-    <button class="tab" data-tab="history">Historial de facturas</button>
-  </div>
-  <div id="panelPatients"><div class="table-wrap"><table>
-    <thead><tr><th>ID</th><th>Nombre del paciente</th><th class="num">Valor</th><th>Acciones</th></tr></thead>
-    <tbody id="tbody"></tbody></table></div></div>
-  <div id="panelHistory" style="display:none"><div class="table-wrap"><table>
-    <thead><tr><th>Factura</th><th>Fecha</th><th>Pacientes</th><th class="num">Total</th><th>Descargar</th></tr></thead>
-    <tbody id="histTbody"></tbody></table></div></div>
-</main>
-
-<div class="overlay" id="ovPatient"><div class="dialog" role="dialog" aria-modal="true" aria-labelledby="modTitle">
-  <h3 id="modTitle">Nuevo paciente</h3>
-  <div class="field"><label for="mName">Nombre completo</label><input id="mName" placeholder="Ej: Juan Pérez García"></div>
-  <div class="field"><label for="mPrice">Precio (vacío = automático)</label><input id="mPrice" placeholder="100000" type="number" min="0"></div>
-  <div class="acts"><button class="btn btn-ghost" id="btnCancelPat">Cancelar</button><button class="btn" id="btnSavePat">Guardar</button></div>
-</div></div>
-
-<div class="overlay" id="ovMass"><div class="dialog" style="max-width:500px" role="dialog" aria-modal="true" aria-labelledby="massTitle">
-  <h3 id="massTitle">Edición masiva de precios</h3>
-  <div id="massGroups"></div>
-  <div id="massPW"><div id="massPB"></div></div>
-  <div id="massPL"></div>
-  <div class="acts" id="massActs"><button class="btn btn-ghost" id="btnCancelMass">Cancelar</button><button class="btn" id="btnApplyMass">Aplicar cambios</button></div>
-</div></div>
-
+    <div class="hypno" aria-hidden="true">
+      <svg viewBox="0 0 1000 200" preserveAspectRatio="none">
+        <path pathLength="1" d="M0 20H40V100H70V140H130V180H230V140H300V60H340V140H420V180H500V140H560V60H640V140H700V100H730V140H790V60H900V20H1000"/>
+      </svg>
+    </div>
+  </section>
+  <main class="login">
+    <h2>Iniciar sesión</h2>
+    <p class="lead">Ingresa con tu usuario y contraseña.</p>
+    <div class="alert" id="errMsg" role="alert"><span id="errTxt"></span></div>
+    <div class="field"><label for="usr">Usuario</label><input id="usr" autocomplete="username" autofocus></div>
+    <div class="field"><label for="pwd">Contraseña</label><input id="pwd" type="password" autocomplete="current-password"></div>
+    <button class="btn" id="btnLogin">Entrar</button>
+  </main>
+</div>
 <script>
-  const token=localStorage.getItem("token");
-  const user=JSON.parse(localStorage.getItem("user")||"null");
-  if(!token||!user){location.href="/";}
-  const AUTH={Authorization:`Bearer ${token}`};
-  const API="/api/medical";
-  const $=id=>document.getElementById(id);
-  let editId=null, allPatients=[];
-  $("navUser").textContent=user.name||user.username;
-
-  const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
-  function cop(v){return "$"+parseInt(v).toLocaleString("es-CO");}
-  function toast(msg,isErr=false){
-    const d=document.createElement("div");d.className="toast"+(isErr?" err":"");d.textContent=msg;
-    document.body.appendChild(d);setTimeout(()=>d.remove(),2800);}
-  function skeleton(tb,cols){
-    tb.innerHTML=Array(5).fill(`<tr class="skel">${"<td><div></div></td>".repeat(cols)}</tr>`).join("");}
-
-  // Tabs
-  document.querySelectorAll(".tab").forEach(t=>{
-    t.onclick=()=>{
-      document.querySelectorAll(".tab").forEach(x=>x.classList.remove("active"));
-      t.classList.add("active");
-      $("panelPatients").style.display=t.dataset.tab==="patients"?"block":"none";
-      $("panelHistory").style.display=t.dataset.tab==="history"?"block":"none";
-      if(t.dataset.tab==="history") loadHistory();
-    };
-  });
-
-  // Pacientes
-  async function load(){
+  const btn = document.getElementById("btnLogin");
+  const err = document.getElementById("errMsg");
+  const errTxt = document.getElementById("errTxt");
+  let errTimer;
+  function showErr(msg){
+    errTxt.textContent = msg; err.classList.add("show");
+    clearTimeout(errTimer); errTimer = setTimeout(()=>err.classList.remove("show"), 4000);
+  }
+  async function doLogin(){
+    const usr = document.getElementById("usr").value.trim();
+    const pwd = document.getElementById("pwd").value;
+    if(!usr || !pwd){ showErr("Completa todos los campos"); return; }
+    btn.textContent = "Ingresando…"; btn.disabled = true;
     try{
-      const res=await fetch(`${API}/patients`,{headers:AUTH});
-      if(res.status===401){location.href="/";return;}
-      const {patients,count,subtotal}=await res.json();
-      allPatients=patients;
-      $("totalTxt").textContent=count;
-      $("subtotalTxt").textContent=cop(subtotal);
-      renderTable(patients);
+      const res = await fetch("/api/auth/login",{method:"POST",headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({username:usr,password:pwd})});
+      const data = await res.json();
+      if(!res.ok){ showErr(data.error || "Error al iniciar sesión"); return; }
+      localStorage.setItem("token", data.token);
+      localStorage.setItem("user", JSON.stringify(data.user));
+      window.location.href = "/dashboard";
     }catch(e){
-      console.error("No se pudo cargar pacientes:",e);
-      toast("Error de conexión con el servidor",true);
+      console.error("Login falló:", e);
+      showErr("Error de conexión con el servidor");
+    }finally{
+      btn.textContent = "Entrar"; btn.disabled = false;
     }
   }
-  function renderTable(pts){
-    const tb=$("tbody");tb.innerHTML="";
-    if(!pts.length){
-      tb.innerHTML=`<tr><td colspan="4" class="td-empty">Aún no hay pacientes. Agrega uno o carga archivos.</td></tr>`;return;}
-    pts.forEach(p=>{
-      const tr=document.createElement("tr");
-      tr.innerHTML=`<td class="td-id">${esc(p.id)}</td>
-        <td class="td-name">${esc(p.name)}</td>
-        <td class="num td-price">${cop(p.price)}</td>
-        <td><button class="btn btn-ghost btn-sm edit" data-id="${esc(p.id)}">Editar</button>
-        <button class="btn btn-danger btn-sm del" data-id="${esc(p.id)}">Eliminar</button></td>`;
-      tb.appendChild(tr);});
-  }
-  $("searchInput").oninput=e=>{
-    const q=e.target.value.toLowerCase();
-    renderTable(q?allPatients.filter(p=>p.name.toLowerCase().includes(q)):allPatients);
-  };
-
-  // CRUD
-  $("addBtn").onclick=()=>{
-    editId=null;$("mName").value="";$("mPrice").value="";
-    $("modTitle").textContent="Nuevo paciente";
-    $("ovPatient").classList.add("show");$("mName").focus();};
-  $("btnCancelPat").onclick=()=>$("ovPatient").classList.remove("show");
-  $("btnSavePat").onclick=async()=>{
-    const name=$("mName").value.trim();
-    if(!name){toast("Nombre requerido",true);return;}
-    const body={name};
-    if($("mPrice").value) body.price=$("mPrice").value;
-    const url=editId?`${API}/patients/${editId}`:`${API}/patients`;
-    const method=editId?"PUT":"POST";
-    const r=await fetch(url,{method,headers:{...AUTH,"Content-Type":"application/json"},body:JSON.stringify(body)});
-    if(!r.ok){toast("Error al guardar",true);return;}
-    $("ovPatient").classList.remove("show");load();
-    toast(editId?"Paciente actualizado":"Paciente agregado");};
-  $("tbody").onclick=e=>{
-    const btn=e.target.closest("button");if(!btn)return;
-    const id=btn.dataset.id;
-    if(btn.classList.contains("del")){
-      if(!confirm("¿Eliminar este paciente?"))return;
-      fetch(`${API}/patients/${id}`,{method:"DELETE",headers:AUTH}).then(load)
-        .then(()=>toast("Paciente eliminado"));
-    }else if(btn.classList.contains("edit")){
-      editId=id;
-      const tr=btn.closest("tr").children;
-      $("mName").value=tr[1].textContent;
-      $("mPrice").value=parseInt(tr[2].textContent.replace(/[^\d]/g,""))||"";
-      $("modTitle").textContent="Editar paciente";
-      $("ovPatient").classList.add("show");}};
-  $("clearBtn").onclick=()=>{
-    $("clearBtn").closest("details").open=false;
-    if(!confirm("¿Vaciar toda la lista? Esta acción no se puede deshacer."))return;
-    fetch(`${API}/clear`,{method:"DELETE",headers:AUTH}).then(load)
-      .then(()=>toast("Lista vaciada"));};
-
-  // Carga de archivos
-  $("uploadBtn").onclick=()=>$("fileInput").click();
-  $("fileInput").onchange=()=>{
-    const fd=new FormData();
-    [...$("fileInput").files].forEach(f=>fd.append("files",f));
-    const xhr=new XMLHttpRequest();
-    xhr.upload.onprogress=e=>{
-      $("progWrap").style.display="block";
-      $("progBar").style.width=Math.round(e.loaded*100/e.total)+"%";};
-    xhr.onload=()=>{$("progWrap").style.display="none";load();$("fileInput").value="";toast("Archivos cargados");};
-    xhr.open("POST",`${API}/patients`);
-    xhr.setRequestHeader("Authorization",`Bearer ${token}`);
-    xhr.send(fd);};
-
-  // Edición masiva
-  let massPatients=[];
-  $("editPricesBtn").onclick=async()=>{
-    const r=await fetch(`${API}/patients`,{headers:AUTH});
-    const {patients}=await r.json();
-    if(!patients.length){toast("Sin pacientes",true);return;}
-    massPatients=patients;
-    const grupos={};
-    patients.forEach(p=>{(grupos[p.price]=grupos[p.price]||[]).push(p.id);});
-    const container=$("massGroups");container.innerHTML="";
-    Object.entries(grupos).sort((a,b)=>parseInt(a[0])-parseInt(b[0])).forEach(([price,ids])=>{
-      const div=document.createElement("div");div.className="grupo";
-      div.innerHTML=`<div class="top"><span><b>${cop(parseInt(price))}</b> <small>${ids.length} paciente${ids.length>1?"s":""}</small></span><small>Precio actual</small></div>
-        <input class="in" style="width:100%" type="number" min="0" data-price="${esc(price)}" placeholder="Nuevo precio (vacío = sin cambio)" aria-label="Nuevo precio para ${cop(parseInt(price))}">`;
-      container.appendChild(div);});
-    $("massPW").style.display="none";$("massPB").style.width="0%";
-    $("massPL").style.display="none";$("massActs").style.display="flex";
-    $("ovMass").classList.add("show");};
-  $("btnCancelMass").onclick=()=>$("ovMass").classList.remove("show");
-  $("btnApplyMass").onclick=async()=>{
-    const cambios=[];
-    document.querySelectorAll("#massGroups input[data-price]").forEach(inp=>{
-      const newPrice=parseInt(inp.value);
-      if(!newPrice||newPrice<0) return;
-      const oldPrice=parseInt(inp.dataset.price);
-      massPatients.filter(p=>p.price===oldPrice).forEach(p=>cambios.push({id:p.id,price:newPrice}));
-    });
-    if(!cambios.length){toast("No hay cambios para aplicar",true);return;}
-    const total=cambios.length;
-    $("massActs").style.display="none";
-    $("massPW").style.display="block";$("massPL").style.display="block";
-    $("massPL").textContent=`Actualizando 0 de ${total}…`;
-    let done=0;
-    for(const c of cambios){
-      await fetch(`${API}/patients/${c.id}`,{method:"PUT",
-        headers:{...AUTH,"Content-Type":"application/json"},
-        body:JSON.stringify({price:c.price})});
-      done++;
-      $("massPB").style.width=Math.round((done/total)*100)+"%";
-      $("massPL").textContent=`Actualizando ${done} de ${total}…`;}
-    $("massPL").textContent=`${total} pacientes actualizados`;
-    setTimeout(()=>{$("ovMass").classList.remove("show");load();
-      toast(`${total} precios actualizados`);},800);};
-
-  // Facturas
-  async function gen(fmt){
-    const r=await fetch(`${API}/patients`,{headers:AUTH});
-    const d=await r.json();
-    if(!d.patients.length){toast("Sin pacientes",true);return;}
-    const num=$("invoiceInput").value.trim()||`FAC-${Date.now().toString().slice(-6)}`;
-    const res=await fetch(`${API}/invoice/${fmt}`,{method:"POST",
-      headers:{...AUTH,"Content-Type":"application/json"},
-      body:JSON.stringify({invoice_number:num})});
-    if(!res.ok){toast("Error al generar la factura",true);return;}
-    const blob=await res.blob();
-    const url=URL.createObjectURL(blob);
-    const a=document.createElement("a");
-    a.href=url;a.download=`Factura_${num}.${fmt==="word"?"docx":"pdf"}`;
-    a.click();setTimeout(()=>URL.revokeObjectURL(url),100);
-    toast(`Factura ${num} generada`);}
-  $("pdfBtn").onclick=()=>gen("pdf");
-  $("docxBtn").onclick=()=>gen("word");
-
-  // Historial
-  async function loadHistory(){
-    const tb=$("histTbody");skeleton(tb,5);
-    const r=await fetch(`${API}/history`,{headers:AUTH});
-    if(!r.ok){tb.innerHTML="";toast("No se pudo cargar el historial",true);return;}
-    const {history}=await r.json();
-    tb.innerHTML="";
-    if(!history.length){
-      tb.innerHTML=`<tr><td colspan="5" class="td-empty">Aún no hay facturas generadas.</td></tr>`;return;}
-    history.forEach(h=>{
-      const tr=document.createElement("tr");
-      const d=new Date(h.created_at).toLocaleString("es-CO");
-      tr.innerHTML=`<td><span class="badge">${esc(h.invoice_number)}</span></td>
-        <td class="td-id">${esc(d)}</td>
-        <td class="td-id">${esc(h.patient_count)}</td>
-        <td class="num">${cop(h.total)}</td>
-        <td><button class="btn btn-ghost btn-sm" data-id="${esc(h.id)}" data-fmt="pdf">PDF</button>
-        <button class="btn btn-ghost btn-sm" data-id="${esc(h.id)}" data-fmt="word">Word</button></td>`;
-      tb.appendChild(tr);});}
-  $("histTbody").onclick=e=>{
-    const b=e.target.closest("button[data-fmt]");if(b) dlHist(b.dataset.id,b.dataset.fmt);};
-  async function dlHist(id,fmt){
-    const res=await fetch(`${API}/history/${id}/download/${fmt}`,{headers:AUTH});
-    if(!res.ok){toast("Error al descargar",true);return;}
-    const blob=await res.blob();
-    const url=URL.createObjectURL(blob);
-    const a=document.createElement("a");a.href=url;a.download=`Factura_historial.${fmt==="word"?"docx":"pdf"}`;
-    a.click();setTimeout(()=>URL.revokeObjectURL(url),100);}
-
-  $("invoiceInput").value=`FAC-${new Date().getFullYear()}${("0000"+(Date.now()%10000)).slice(-4)}`;
-  skeleton($("tbody"),4);
-  load();
+  btn.onclick = doLogin;
+  document.addEventListener("keydown", e => { if(e.key === "Enter") doLogin(); });
 </script>
 </body>
 </html>
